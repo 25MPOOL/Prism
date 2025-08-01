@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+
+# misc
+.DS_Store
+*.pem
+
+# env
+.env
+.env.local
+.env.development
+.env.production
+
+# cache file

@@ -1,0 +1,18 @@
+name: 'チケット作成用'
+description: '目的と完了条件を記述するテンプレート'
+title: '[ここにタイトルを記入]'
+labels: []
+body:
+  - type: textarea
+    id: template
+    attributes:
+      label: 🎯 目的と完了条件
+      description: このIssueの目的と完了条件を記述してください
+      value: |
+        ## 🎯 目的
+        （ここに目的を記入）
+
+        ## ✅ 完了条件
+        - [ ] （ここに完了条件を記入）
+    validations:
+      required: true
