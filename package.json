@@ -12,7 +12,8 @@
 	},
 	"lint-staged": {
 		"*.{js,ts,jsx,tsx,json}": [
-			"pnpm format"
+			"pnpm format",
+			"pnpm lint:fix"
 		]
 	},
 	"engines": {
