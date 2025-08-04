@@ -3,8 +3,6 @@
   "compilerOptions": {
     "target": "ESNext",
     "lib": ["ESNext"],
-    "types": ["node"],
-    "moduleResolution": "node",
     "jsxImportSource": "hono/jsx"
   }
 }
