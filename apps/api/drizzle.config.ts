@@ -1,4 +1,13 @@
 import { defineConfig } from "drizzle-kit";
+import "dotenv/config";
+// 環境変数が取得できているか判定する
+function getEnvVariable(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`環境変数 ${name} が設定されていません`);
+  }
+  return value;
+}
 
 export default defineConfig({
   // スキーマファイルの場所
@@ -7,7 +16,9 @@ export default defineConfig({
   out: "./drizzle/migrations",
   dialect: "sqlite",
   dbCredentials: {
-    url: "./.wrangler/state/v3/d1/miniflare-D1DatabaseObject/162a2a05-5259-4671-897a-966d92b9cf5c.sqlite",
+    accountId: getEnvVariable("CLOUDFLARE_ACCOUNT_ID"),
+    databaseId: getEnvVariable("CLOUDFLARE_DATABASE_ID"),
+    token: getEnvVariable("CLOUDFLARE_API_TOKEN"),
   },
   verbose: true,
   strict: true,
