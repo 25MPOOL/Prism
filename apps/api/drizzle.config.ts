@@ -10,9 +10,7 @@ function getEnvVariable(name: string): string {
 }
 
 export default defineConfig({
-  // スキーマファイルの場所
   schema: "./drizzle/schema.ts",
-  // マイグレーションファイルの出力先
   out: "./drizzle/migrations",
   dialect: "sqlite",
   dbCredentials: {
