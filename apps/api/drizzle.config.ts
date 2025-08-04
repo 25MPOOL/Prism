@@ -1,6 +1,6 @@
 import { defineConfig } from "drizzle-kit";
 import "dotenv/config";
-// 環境変数が取得できているか判定する
+
 function getEnvVariable(name: string): string {
   const value = process.env[name];
   if (!value) {
