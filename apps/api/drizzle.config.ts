@@ -10,14 +10,17 @@ function getEnvVariable(name: string): string {
 }
 
 export default defineConfig({
+  // スキーマファイルの場所
   schema: "./drizzle/schema.ts",
+  // マイグレーションファイルの出力先
   out: "./drizzle/migrations",
   dialect: "sqlite",
-  dbCredentials: {
-    accountId: getEnvVariable("CLOUDFLARE_ACCOUNT_ID"),
-    databaseId: getEnvVariable("CLOUDFLARE_DATABASE_ID"),
-    token: getEnvVariable("CLOUDFLARE_API_TOKEN"),
-  },
+  //driver: 'd1',
+  // dbCredentials: {
+  //     // wranglerの設定ファイルパス
+  //     wranglerConfigPath: './wrangler.jsonc',
+  //     dbName: 'dummy',
+  // },
   verbose: true,
   strict: true,
 });

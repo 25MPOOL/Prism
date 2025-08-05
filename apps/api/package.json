@@ -3,12 +3,12 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy --minify",
+    "deploy": "wrangler deploy --minify src/index.ts",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "start": "wrangler dev src/index.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 execute prism-db --local --file ./drizzle/migrations/0000_soft_slipstream.sql",
-    "db:migrate:prod": "wrangler d1 execute prism-db --file ./drizzle/migrations/0000_soft_slipstream.sql",
+    "db:migrate:local": "wrangler d1 migrations apply DUMMY_D1_DATABASE_NAME --local",
+    "db:migrate:prod": "wrangler d1 migrations apply DUMMY_D1_DATABASE_NAME",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
