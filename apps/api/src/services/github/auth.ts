@@ -1,32 +1,48 @@
-import { Hono } from "hono";
+import type { GitHubTokenResponse } from "../../types/github"; // 型定義をインポート
 
-// 1. 環境変数の型を定義します。
-// ここに`GITHUB_CLIENT_ID`と`GITHUB_REDIRECT_URI`が
-// 存在することをTypeScriptに伝えます。
-interface Env {
-  GITHUB_CLIENT_ID: string;
-  GITHUB_REDIRECT_URI: string;
+/**
+ * GitHubの認証コードを使ってアクセストークンを交換する関数。
+ * この関数はHTTPリクエストのハンドリングは行わず、純粋にトークン交換のロジックのみを提供します。
+ * @param code GitHubから受け取った認証コード
+ * @param clientId GitHub AppのクライアントID
+ * @param clientSecret GitHub Appのクライアントシークレット
+ * @returns アクセストークンとリフレッシュトークンを含むオブジェクト、またはnull
+ */
+export async function exchangeCodeForTokens(
+  code: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<GitHubTokenResponse | null> {
+  try {
+    const response = await fetch(
+      "https://github.com/login/oauth/access_token",
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+          client_secret: clientSecret,
+          code: code,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      console.error(
+        `Failed to exchange code for tokens: ${response.status} ${response.statusText}`,
+      );
+      const errorData = await response.json();
+      console.error("Error details:", errorData);
+      return null;
+    }
+
+    const data: GitHubTokenResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error during token exchange:", error);
+    return null;
+  }
 }
-
-// 2. Honoのインスタンスを作成する際に、ジェネリクスを使って
-// `env`の型として定義した`Env`インターフェースを渡します。
-const app = new Hono<{ Bindings: Env }>();
-
-// GitHub OAuth認証の開始エンドポイント
-app.get("/login/github", async (c) => {
-  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
-  const GITHUB_REDIRECT_URI = c.env.GITHUB_REDIRECT_URI;
-
-  // CSRF対策のため、一意なstate文字列を生成
-  const state = Math.random().toString(36).substring(2);
-
-  // ⚠️ 注意: 実際のアプリケーションでは、このstateをセッションなどに保存し、
-  // コールバック時に検証する必要があります。
-
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${GITHUB_REDIRECT_URI}&state=${state}&scope=repo,read:org`;
-
-  // 生成したURLにユーザーをリダイレクトします。
-  return c.redirect(githubAuthUrl);
-});
-
-export default app;
