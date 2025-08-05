@@ -30,7 +30,7 @@ githubRouter.get("/callback", async (c) => {
   const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
 
   const code = c.req.query("code");
-  const state = c.req.query("state"); // stateはCSRF対策に必要
+  // const state = c.req.query("state"); // stateはCSRF対策に必要
 
   // ⚠️ 実際のアプリケーションでは、CSRF対策のstate検証が必要です。
 
