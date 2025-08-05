@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // 対話のセッション情報を保存するテーブル
 export const conversations = sqliteTable("conversations", {

@@ -27,6 +27,10 @@
   "manifest": {
     "host_permissions": [
       "https://*/*"
+    ],
+    "permissions": [
+      "sidePanel",
+      "activeTab"
     ]
   }
 }

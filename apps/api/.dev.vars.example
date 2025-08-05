@@ -1,0 +1,11 @@
+# === Cloudflare Identifiers ===
+CLOUDFLARE_API_TOKEN=""
+CLOUDFLARE_ACCOUNT_ID=""
+CLOUDFLARE_DATABASE_ID=""
+
+# === Gemini API ===
+GEMINI_API_KEY=""
+
+# === Github API ===
+GITHUB_APP_ID=""
+GITHUB_SECRETKEY=""
