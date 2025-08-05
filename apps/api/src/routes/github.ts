@@ -8,7 +8,7 @@ const githubRouter = new Hono<{ Bindings: GithubEnv }>();
 
 // GitHub OAuth認証の開始エンドポイント
 // ユーザーをGitHubの認証ページへリダイレクトします。
-githubRouter.get("/login", async (c) => {
+githubRouter.get("/oauth", async (c) => {
   const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
   const GITHUB_REDIRECT_URI = c.env.GITHUB_REDIRECT_URI;
 
