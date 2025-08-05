@@ -5,16 +5,6 @@ import type { AppEnv } from "../types/definitions";
 
 const conversations = new Hono<AppEnv>();
 
-// CORSミドルウェアを追加
-// conversations.use(
-//   "/*",
-//   cors({
-//     origin: "*", // 本番では具体的なドメインを指定
-//     allowMethods: ["GET", "POST", "OPTIONS"],
-//     allowHeaders: ["Content-Type"],
-//   }),
-// );
-
 // チャット用エンドポイント
 conversations.post("/chat", async (c) => {
   // 処理中に何かエラーが起こったらcatchがキャッチ
