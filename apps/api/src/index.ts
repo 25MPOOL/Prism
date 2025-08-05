@@ -1,39 +1,27 @@
 import { Hono } from "hono";
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "../drizzle/schema";
+import { cors } from "hono/cors";
+import { conversations } from "./routes/conversation";
+import type { AppEnv } from "./types/definitions";
 
-//環境変数の型定義
-type Env = CloudflareBindings;
+const app = new Hono<AppEnv>();
 
-//Drizzleインスタンスの型
-export type DrizzleDB = ReturnType<typeof drizzle<typeof schema>>;
+/**
+ * CORS 設定
+ */
+app.use(
+  "/*",
+  cors({
+    origin: "chrome-extension://iehakmnooonopdcffjcibndgidphpanc",
+    allowMethods: ["GET", "POST", "PUT", "DELETE"],
+    allowHeaders: ["Content-Type"],
+  }),
+);
 
-//Honoのコンテキスト型
-type AppContext = {
-  Bindings: Env;
-  Variables: {
-    db: DrizzleDB;
-  };
-};
-
-const app = new Hono<AppContext>();
-
-// ミドルウェア: リクエストごとにDBインスタンスを生成
-app.use("*", async (c, next) => {
-  const db = drizzle(c.env.DB, { schema });
-  c.set("db", db);
-  await next();
-});
 
 app.get("/", (c) => {
   return c.text("Hello Hono!");
 });
 
-// テスト用エンドポイント: conversationを取得
-app.get("/conversations", async (c) => {
-  const db = c.get("db");
-  const conversations = await db.select().from(schema.conversations);
-  return c.json(conversations);
-});
+app.route("/", conversations);
 
 export default app;
