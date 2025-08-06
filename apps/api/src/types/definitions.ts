@@ -77,3 +77,4 @@ export interface WebSocketResponse {
   type: "chat_response" | "session_created" | "error" | "pong" | "processing";
   data: ChatResponseData | SessionCreatedData | ErrorData | PongData | null;
   messageId?: string;
+}

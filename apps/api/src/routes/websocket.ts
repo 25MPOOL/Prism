@@ -75,7 +75,7 @@ async function handleWebSocketMessage(
       handlePing(webSocket, message.messageId);
       break;
     default:
-      sendError(webSocket, `Unknown message type: ${(message as any).type}`);
+      sendError(webSocket, `Unknown message type: ${message.type}`);
   }
 }
 
