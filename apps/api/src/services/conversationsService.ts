@@ -6,7 +6,7 @@ Just reply A
 
 export interface ConversationMessage {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "ai";
   content: string;
   timestamp: Date;
 }
@@ -38,7 +38,7 @@ export class ConversationService {
 
     return {
       id: crypto.randomUUID(),
-      role: "assistant",
+      role: "ai",
       content: aiResponse,
       timestamp: new Date(),
     };

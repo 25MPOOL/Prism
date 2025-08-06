@@ -16,8 +16,6 @@ app.use(
     allowHeaders: ["Content-Type"],
   }),
 );
-
-
 app.get("/", (c) => {
   return c.text("Hello Hono!");
 });
