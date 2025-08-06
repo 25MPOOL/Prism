@@ -1,11 +1,12 @@
 import { AppLayout } from "@/sidepanel/AppLayout";
 import { ChatInput } from "@/components/ChatInput";
+import { ChatArea } from "@/components/ChatArea";
 import "@/globals.css";
 
 function SidePanel() {
   return (
     <AppLayout>
-      <div className="grow">SidePanel</div>
+      <ChatArea />
       <ChatInput />
     </AppLayout>
   );
