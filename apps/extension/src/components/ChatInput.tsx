@@ -10,7 +10,7 @@ export const ChatInput = () => {
               autoComplete="off"
               spellCheck="false"
               aria-multiline="true"
-              style={{ height: 56 }}
+              style={{ height: 56 }} // TODO: テキストエリアの高さを動的にする
             >
               aaaaaaa
             </textarea>
