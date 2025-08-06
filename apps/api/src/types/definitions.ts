@@ -1,9 +1,9 @@
+// GitHub関連の環境変数の型定義をインポート
+import type { GithubEnv } from "./github";
+
 // Cloudflare Workers環境の型定義
-export type AppEnv = {
-  Bindings: {
-    GEMINI_API_KEY: string;
-    GITHUB_APP_ID: string;
-    GITHUB_SECRET_KEY: string;
-    //DB: D1Database;
-  };
-};
+// Cloudflare Workers環境の型定義を拡張し、すべての環境変数をここに集約します。
+export interface AppEnv extends GithubEnv {
+  GEMINI_API_KEY: string;
+  //DB: D1Database;
+}

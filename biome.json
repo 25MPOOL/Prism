@@ -12,7 +12,8 @@
       "!**/.plasmo/**",
       "!**/build/**",
       "!**/dist/**",
-      "!**/node_modules/**"
+      "!**/node_modules/**",
+      "!**/worker-configuration.d.ts"
     ]
   },
   "formatter": {
