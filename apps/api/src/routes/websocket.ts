@@ -7,7 +7,7 @@ import type {
 } from "../types/definitions";
 import { ConversationService } from "../services/conversationsService";
 
-const websocket = new Hono<AppEnv>();
+const websocket = new Hono<{ Bindings: AppEnv }>();
 
 websocket.get("/connect", async (c) => {
   const upgradeHeader = c.req.header("Upgrade");
