@@ -40,7 +40,7 @@ export const AppLayout = (props: AppLayoutProps) => {
           </button>
         </div>
       </header>
-      <main className="grow">{children}</main>
+      <main className="grow p-4 flex flex-col">{children}</main>
     </div>
   );
 };
