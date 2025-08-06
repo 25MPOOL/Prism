@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { conversations } from "./routes/conversation";
+import { websocket } from "./routes/websocket";
 import type { AppEnv } from "./types/definitions";
 
 const app = new Hono<AppEnv>();
@@ -16,10 +17,13 @@ app.use(
     allowHeaders: ["Content-Type"],
   }),
 );
+
 app.get("/", (c) => {
   return c.text("Hello Hono!");
 });
 
 app.route("/", conversations);
+
+app.route("/ws", websocket);
 
 export default app;
