@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { ConversationService } from "../services/conversationsService";
 import type {
   AppEnv,
+  ChatMessageData,
   WebSocketMessage,
   WebSocketResponse,
-  ChatMessageData,
 } from "../types/definitions";
+import { ConversationService } from "../services/conversationsService";
 
 const websocket = new Hono<AppEnv>();
 
