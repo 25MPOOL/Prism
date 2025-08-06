@@ -1,15 +1,16 @@
 import { Hono } from "hono";
-import { exchangeCodeForTokens } from "../services/github/auth"; // 追加: サービス関数をインポート
-import type { GithubEnv } from "../types/github"; // 修正: 型定義をtypesからインポート
+import { exchangeCodeForTokens } from "../services/github/auth";
+import type { AppEnv } from "../types/definitions"; // AppEnvをインポート
 
 // GitHub関連のルートを管理するためのHonoインスタンスを作成します。
-// ここでは、環境変数の型としてGithubEnvを渡します。
-const githubRouter = new Hono<{ Bindings: GithubEnv }>();
+// 修正: Bindingsの型としてAppEnv自体を使用します。
+// これにより、c.envがAppEnvのプロパティ（GITHUB_CLIENT_IDなど）を直接持つことを示します。
+const githubRouter = new Hono<{ Bindings: AppEnv }>();
 
 // GitHub OAuth認証の開始エンドポイント
 // ユーザーをGitHubの認証ページへリダイレクトします。
 githubRouter.get("/oauth", async (c) => {
-  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
+  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID; // c.envがAppEnv型を持つため、エラーが解消
   const GITHUB_REDIRECT_URI = c.env.GITHUB_REDIRECT_URI;
 
   // CSRF攻撃を防ぐための一意なstate文字列を生成
@@ -26,11 +27,11 @@ githubRouter.get("/oauth", async (c) => {
 // GitHub OAuth認証のコールバックエンドポイント
 // GitHubからの認証コードを受け取り、アクセストークンを交換します。
 githubRouter.get("/callback", async (c) => {
-  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
+  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID; // c.envがAppEnv型を持つため、エラーが解消
   const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
 
   const code = c.req.query("code");
-  // const state = c.req.query("state"); // stateはCSRF対策に必要
+  const _state = c.req.query("state"); // stateはCSRF対策に必要
 
   // ⚠️ 実際のアプリケーションでは、CSRF対策のstate検証が必要です。
 
@@ -38,7 +39,7 @@ githubRouter.get("/callback", async (c) => {
     return c.text("No code provided", 400);
   }
 
-  // 修正: サービス層の関数を呼び出してアクセストークンを交換
+  // サービス層の関数を呼び出してアクセストークンを交換
   const tokens = await exchangeCodeForTokens(
     code,
     GITHUB_CLIENT_ID,
