@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { ConversationService } from "../services/conversationsService";
 import type { AppEnv } from "../types/definitions";
 
-const conversations = new Hono<AppEnv>();
+const conversations = new Hono<{ Bindings: AppEnv }>();
 
 // チャット用エンドポイント
 conversations.post("/chat", async (c) => {

@@ -17,9 +17,9 @@ export class ConversationService {
 
   // メインの対話処理メソッド
   async processMessage(
-    sessionId: string,
-    userMessage: string,
-    context?: ConversationSession,
+    _sessionId: string,
+    _userMessage: string,
+    _context?: ConversationSession,
   ): Promise<ConversationMessage> {
     // Prismプロンプト構築
     const prompt = PROMPT_TEMPLATE;
