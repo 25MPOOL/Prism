@@ -1,5 +1,12 @@
+import { AppLayout } from "@/sidepanel/AppLayout";
+import "@/globals.css";
+
 function SidePanel() {
-  return <div>SidePanel</div>;
+  return (
+    <AppLayout>
+      <div>SidePanel</div>
+    </AppLayout>
+  );
 }
 
 export default SidePanel;
