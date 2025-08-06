@@ -17,7 +17,6 @@ export const ChatInput = () => {
           </div>
           <div className="flex items-center justify-between px-2 pb-2">
             {/* TODO: 追加ボタン (今後追加されるかも?) */}
-            {/* TODO: アイコンに後で変える */}
             <button
               type="button"
               className="flex h-8 flex-shrink-0 place-content-center rounded-md border border-transparent px-1.5 duration-75 hover:bg-[#656c7626]"
