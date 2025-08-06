@@ -29,7 +29,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.44.4
-        version: 0.44.4(@types/better-sqlite3@7.6.13)(better-sqlite3@12.2.0)
+        version: 0.44.4(@cloudflare/workers-types@4.20250806.0)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.2.0)
       hono:
         specifier: ^4.8.10
         version: 4.8.10
@@ -54,7 +54,7 @@ importers:
         version: 5.3.3
       wrangler:
         specifier: ^4.27.0
-        version: 4.27.0
+        version: 4.27.0(@cloudflare/workers-types@4.20250806.0)
 
   apps/extension:
     dependencies:
@@ -269,6 +269,9 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@cloudflare/workers-types@4.20250806.0':
+    resolution: {integrity: sha512-zPhaMWbwBaxrx2J54SfnKoBiiEQ0scfT8tuu4r5EvLSu82DB+plEFQAZXRdsi6cL04AMpZ43ErSyRPe2KK9cZA==}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -4039,6 +4042,9 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20250730.0':
     optional: true
 
+  '@cloudflare/workers-types@4.20250806.0':
+    optional: true
+
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
@@ -6222,8 +6228,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.4(@types/better-sqlite3@7.6.13)(better-sqlite3@12.2.0):
+  drizzle-orm@0.44.4(@cloudflare/workers-types@4.20250806.0)(@types/better-sqlite3@7.6.13)(better-sqlite3@12.2.0):
     optionalDependencies:
+      '@cloudflare/workers-types': 4.20250806.0
       '@types/better-sqlite3': 7.6.13
       better-sqlite3: 12.2.0
 
@@ -7736,7 +7743,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20250730.0
       '@cloudflare/workerd-windows-64': 1.20250730.0
 
-  wrangler@4.27.0:
+  wrangler@4.27.0(@cloudflare/workers-types@4.20250806.0):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.4.0
       '@cloudflare/unenv-preset': 2.5.0(unenv@2.0.0-rc.19)(workerd@1.20250730.0)
@@ -7747,6 +7754,7 @@ snapshots:
       unenv: 2.0.0-rc.19
       workerd: 1.20250730.0
     optionalDependencies:
+      '@cloudflare/workers-types': 4.20250806.0
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil

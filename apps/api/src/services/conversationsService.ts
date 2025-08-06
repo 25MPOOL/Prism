@@ -1,21 +1,12 @@
 import { GeminiAPIClient } from "./google/gemini-api";
+import type {
+  ConversationMessage,
+  ConversationSession,
+} from "../types/definitions";
 
 const PROMPT_TEMPLATE = `
 Just reply A
 `;
-
-export interface ConversationMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-}
-
-export interface ConversationSession {
-  id: string;
-  messages: ConversationMessage[];
-  phase: "idea" | "requirements" | "tasks";
-}
 
 export class ConversationService {
   private geminiClient: GeminiAPIClient;
@@ -38,7 +29,7 @@ export class ConversationService {
 
     return {
       id: crypto.randomUUID(),
-      role: "assistant",
+      role: "ai",
       content: aiResponse,
       timestamp: new Date(),
     };
