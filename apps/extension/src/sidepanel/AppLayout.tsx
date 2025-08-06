@@ -6,41 +6,41 @@ export const AppLayout = (props: AppLayoutProps) => {
   const { children } = props;
 
   return (
-    <div className="flex flex-col min-h-full w-full">
-      <header className="shadow-inner-bottom p-4 w-full bg-[#151b23] gap-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Prism</h1>
+    <div className="flex min-h-full w-full flex-col">
+      <header className="flex w-full items-center justify-between gap-3 bg-[#151b23] p-4 shadow-inner-bottom">
+        <h1 className="font-bold text-xl">Prism</h1>
         <div className="flex items-center gap-2">
           {/* TODO: 新しいチャットを開くボタン */}
           <button
-            className="h-8 w-8 border border-[#3d444d] rounded-md"
+            className="h-8 w-8 rounded-md border border-[#3d444d]"
             type="button"
           >
             A
           </button>
           {/* TODO: チャット履歴を開くボタン */}
           <button
-            className="h-8 w-8 border border-[#3d444d] rounded-md"
+            className="h-8 w-8 rounded-md border border-[#3d444d]"
             type="button"
           >
             A
           </button>
           {/* TODO: 3点リーダー */}
           <button
-            className="h-8 w-8 border border-[#3d444d] rounded-md"
+            className="h-8 w-8 rounded-md border border-[#3d444d]"
             type="button"
           >
             A
           </button>
           {/* TODO: 閉じるボタンまたは、ユーザーアイコン ログアウトとか */}
           <button
-            className="h-8 w-8 border border-[#3d444d] rounded-md"
+            className="h-8 w-8 rounded-md border border-[#3d444d]"
             type="button"
           >
             A
           </button>
         </div>
       </header>
-      <main className="grow p-4 flex flex-col">{children}</main>
+      <main className="flex grow flex-col p-4">{children}</main>
     </div>
   );
 };
