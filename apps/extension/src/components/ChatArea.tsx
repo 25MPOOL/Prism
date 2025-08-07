@@ -1,11 +1,11 @@
-import { AIOutput } from "./AIOutput";
-import { UserOutput } from "./UserOutput";
+import { ModelResponse } from "./ModelResponse";
+import { UserQuery } from "./UserQuery";
 
 export const ChatArea = () => {
   return (
     <div className="flex grow flex-col gap-4">
-      <UserOutput text="こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！" />
-      <AIOutput text="こんにちは、こんにちは、こんにちは、こんにちは、こんにちは、こんにちは" />
+      <UserQuery text="こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！こんにちは！" />
+      <ModelResponse text="こんにちは、こんにちは、こんにちは、こんにちは、こんにちは、こんにちは" />
     </div>
   );
 };
