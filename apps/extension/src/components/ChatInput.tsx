@@ -1,6 +1,6 @@
 export const ChatInput = () => {
   return (
-    <div className="w-full">
+    <div className="w-full px-4 pb-4">
       <form className="-outline-offset-1 rounded-xl border border-[#3d444d] outline-2 outline-[#316dca]">
         <div className="flex flex-col">
           <div className="whitespace-pre-wrap">

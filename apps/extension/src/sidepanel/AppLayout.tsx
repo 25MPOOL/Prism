@@ -6,7 +6,7 @@ export const AppLayout = (props: AppLayoutProps) => {
   const { children } = props;
 
   return (
-    <div className="flex min-h-full w-full flex-col">
+    <div className="flex h-full w-full flex-col overflow-hidden">
       <header className="flex w-full items-center justify-between gap-3 bg-[#151b23] p-4 shadow-inner-bottom">
         <h1 className="font-bold text-xl">Prism</h1>
         <div className="flex items-center gap-2">
@@ -40,7 +40,7 @@ export const AppLayout = (props: AppLayoutProps) => {
           </button>
         </div>
       </header>
-      <main className="flex grow flex-col p-4">{children}</main>
+      <main className="flex min-h-0 grow flex-col">{children}</main>
     </div>
   );
 };
