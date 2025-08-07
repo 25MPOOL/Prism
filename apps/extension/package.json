@@ -37,7 +37,7 @@
       "default_path": "sidepanel.html"
     },
     "commands": {
-      "_execute_action": {
+      "_execute_side_panel": {
         "suggested_key": {
           "default": "Alt+S",
           "mac": "Alt+S",
@@ -45,7 +45,7 @@
           "chromeos": "Alt+S",
           "linux": "Alt+S"
         },
-        "description": "サイドパネルを開く"
+        "description": "サイドパネルを開閉する"
       }
     }
   }
