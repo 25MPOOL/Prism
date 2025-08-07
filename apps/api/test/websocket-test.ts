@@ -6,7 +6,7 @@ import type { WebSocketResponse } from "../src/types/definitions";
 const WS_URL = "ws://localhost:8787/ws/connect";
 
 class WebSocketTester extends EventEmitter {
-  // 👈 EventEmitterを継承
+  //  EventEmitterを継承
   private ws: WebSocket | null = null;
   private sessionId: string | null = null;
   private rl: readline.Interface;
