@@ -1,5 +1,5 @@
-import { EventEmitter } from "events";
-import * as readline from "readline";
+import { EventEmitter } from "node:events";
+import * as readline from "node:readline";
 import WebSocket from "ws";
 import type { WebSocketResponse } from "../src/types/definitions";
 
@@ -95,7 +95,7 @@ class WebSocketTester extends EventEmitter {
     });
   }
 
-  async testChat(message: string): Promise<any> {
+  async testChat(message: string): Promise<{ message: { content: string } }> {
     if (!this.sessionId) throw new Error("セッションIDがありません。");
 
     console.log(`\n💬 チャットテスト開始: "${message}"`);

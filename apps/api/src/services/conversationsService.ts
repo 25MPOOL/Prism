@@ -10,9 +10,8 @@ import type { D1Database } from "@cloudflare/workers-types";
 
 /**
  * Gemini API に投げるプロンプト
- * - {USER_MESSAGE}: 判定対象のお題に置換される
- * - {labels}: Vision API が検出したラベルのリストに置換される
- * - {colors}: Vision API が検出した主要な色の情報に置換される
+ * - {USER_MESSAGE}: ユーザーからの回答
+ * - {HISTORY}: これまでの対話履歴
  */
 const PROMPT_TEMPLATE = `
 # [Prism] AI ペルソナ & 全体指示書
