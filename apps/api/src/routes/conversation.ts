@@ -13,11 +13,12 @@ conversations.post("/chat", async (c) => {
     const { message, sessionId } = await c.req.json();
 
     const apiKey = c.env?.GEMINI_API_KEY;
-    if (!apiKey) {
-      return c.json({ error: "API key not found" }, 500);
+    const database = c.env?.DB;
+    if (!apiKey || !database) {
+      return c.json({ error: "API key or database is not found" }, 500);
     }
 
-    const conversationService = new ConversationService(apiKey);
+    const conversationService = new ConversationService(apiKey, database);
     const response = await conversationService.processMessage(
       sessionId || "test-session",
       message,
