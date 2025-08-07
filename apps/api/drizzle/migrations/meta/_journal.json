@@ -8,6 +8,20 @@
       "when": 1754202851280,
       "tag": "0000_soft_slipstream",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1754577781929,
+      "tag": "0001_damp_vin_gonzales",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1754577934058,
+      "tag": "0002_serious_zuras",
+      "breakpoints": true
     }
   ]
 }

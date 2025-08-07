@@ -11,7 +11,8 @@
     {
       "binding": "DB",
       "database_name": "prism-db",
-      "database_id": "162a2a05-5259-4671-897a-966d92b9cf5c"
+      "database_id": "162a2a05-5259-4671-897a-966d92b9cf5c",
+      "migrations_dir": "drizzle/migrations"
     }
   ],
   // "ai": {

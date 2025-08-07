@@ -5,7 +5,13 @@ export const conversations = sqliteTable("conversations", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),
   title: text("title").notNull(),
+  phase: text("phase", { enum: ["idea", "requirements", "tasks"] }) // フェーズ管理を追加
+    .notNull()
+    .default("idea"), // デフォルト(始め)はidea
   createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .default(new Date()),
 });
@@ -16,7 +22,7 @@ export const messages = sqliteTable("messages", {
   conversationId: text("conversation_id")
     .notNull()
     .references(() => conversations.id),
-  role: text("role", { enum: ["user", "assistant"] }).notNull(),
+  role: text("role", { enum: ["user", "ai"] }).notNull(),
   content: text("content").notNull(),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()

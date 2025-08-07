@@ -17,7 +17,8 @@ websocket.get("/connect", async (c) => {
   }
 
   const apiKey = c.env?.GEMINI_API_KEY;
-  if (!apiKey) {
+  const database = c.env?.DB;
+  if (!apiKey || !database) {
     return c.text("API key not found", 500);
   }
 
@@ -25,7 +26,7 @@ websocket.get("/connect", async (c) => {
   const webSocketPair = new WebSocketPair();
   const [client, server] = Object.values(webSocketPair);
 
-  const conversationService = new ConversationService(apiKey);
+  const conversationService = new ConversationService(apiKey, database);
 
   // server側トランシーバーの起動
   server.accept();
