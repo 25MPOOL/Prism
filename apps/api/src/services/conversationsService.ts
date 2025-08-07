@@ -87,6 +87,10 @@ const PROMPT_TEMPLATE = `
 - 「次の質問です。」や「tasksフェーズに移行します」のように機械的ではなく、自然な会話形式で話をすること。
 `;
 
+const _ISSUE_TEMPLATE = `
+
+`;
+
 export class ConversationService {
   private geminiClient: GeminiAPIClient;
   private db: ReturnType<typeof drizzle>;

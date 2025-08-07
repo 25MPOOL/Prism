@@ -12,3 +12,7 @@ node_modules/
 .env.production
 
 # cache file
+
+# テスト用ファイル
+apps/api/test/websocket-test.html
+apps/api/test/websocket-test.ts
