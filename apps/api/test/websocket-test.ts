@@ -1,8 +1,7 @@
-import { EventEmitter } from "events"; // 👈 イベント駆動にするために追加
+import { EventEmitter } from "events";
 import * as readline from "readline";
 import WebSocket from "ws";
-import type { WebSocketResponse } from "../src/types/definitions"; // 👈 型をインポート
-import { resolve } from "path";
+import type { WebSocketResponse } from "../src/types/definitions";
 
 const WS_URL = "ws://localhost:8787/ws/connect";
 
@@ -49,6 +48,13 @@ class WebSocketTester extends EventEmitter {
     try {
       const message: WebSocketResponse = JSON.parse(data.toString());
       console.log("📨 受信:", message);
+
+      // エラーメッセージの場合は専用処理
+      if (message.type === "error") {
+        console.error("❌ サーバーエラー:", message.data);
+        return;
+      }
+
       // 受信したメッセージのタイプをイベントとして発行する
       this.emit(message.type, message.data);
     } catch (error) {
