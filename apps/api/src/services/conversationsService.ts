@@ -103,6 +103,8 @@ export class ConversationService {
     const sessionId = crypto.randomUUID();
     const now = new Date();
 
+    console.log("🔄 DB: セッションを作成中...", sessionId); // デバッグログ追加
+
     await this.db.insert(conversations).values({
       id: sessionId,
       userId,
@@ -111,6 +113,8 @@ export class ConversationService {
       createdAt: now,
       updatedAt: now,
     });
+
+    console.log("✅ DB: セッション作成完了", sessionId); // デバッグログ追加
 
     return {
       id: sessionId,
@@ -271,6 +275,10 @@ export class ConversationService {
     const messageId = crypto.randomUUID();
     const now = new Date();
 
+    console.log(
+      `🔄 DB: メッセージを保存中... [${role}] ${content.substring(0, 50)}...`,
+    ); // デバッグログ追加
+
     await this.db.insert(messages).values({
       id: messageId,
       conversationId: sessionId,
@@ -278,6 +286,8 @@ export class ConversationService {
       content,
       createdAt: now,
     });
+
+    console.log(`✅ DB: メッセージ保存完了 ${messageId}`); // デバッグログ追加
 
     return {
       id: messageId,
