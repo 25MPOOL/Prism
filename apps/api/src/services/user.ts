@@ -77,20 +77,25 @@ export async function saveGitHubTokens(
       .update(githubTokens)
       .set({
         accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token || existingTokens[0].refreshToken, // リフレッシュトークンが提供されない場合は既存のものを維持
+        refreshToken: tokens.refresh_token ?? existingTokens[0]?.refreshToken,
         accessTokenExpiresAt: accessTokenExpiresAt,
         refreshTokenExpiresAt: tokens.refresh_token_expires_in
           ? Math.floor(Date.now() / 1000) + tokens.refresh_token_expires_in
-          : existingTokens[0].refreshTokenExpiresAt,
+          : existingTokens[0]?.refreshTokenExpiresAt,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(githubTokens.userId, userId));
   } else {
     // 既存のトークンがない場合、新規挿入
+    if (!tokens.refresh_token) {
+      throw new Error(
+        "refresh_token is required for new githubTokens insert, but was not provided.",
+      );
+    }
     await db.insert(githubTokens).values({
       userId: userId,
       accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token || "", // refreshTokenが必須の場合、nullish coalescingは使えないので注意
+      refreshToken: tokens.refresh_token,
       accessTokenExpiresAt: accessTokenExpiresAt,
       refreshTokenExpiresAt: tokens.refresh_token_expires_in
         ? Math.floor(Date.now() / 1000) + tokens.refresh_token_expires_in
