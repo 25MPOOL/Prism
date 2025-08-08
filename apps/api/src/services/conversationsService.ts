@@ -21,7 +21,8 @@ export class ConversationService {
 
   // セッション作成メソッド
   async createSession(
-    userId: string = "anonymous",
+    // TODO: ユーザーIDをDBから取得する
+    userId: string = "44405031-f2b1-4439-8890-3d289b12ff2f",
   ): Promise<ConversationSession> {
     const sessionId = crypto.randomUUID();
     const now = new Date();
