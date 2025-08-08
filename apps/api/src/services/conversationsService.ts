@@ -8,7 +8,11 @@ import type {
   GeneratedIssue,
 } from "../types/definitions";
 import { GeminiAPIClient } from "./google/gemini-api";
-import { PROMPT_TEMPLATE, TASKS_GENERATION_TEMPLATE } from "./prompts";
+import {
+  PROMPT_TEMPLATE,
+  TASKS_GENERATION_TEMPLATE,
+  REQUIREMENTS_DOC_TEMPLATE,
+} from "./prompts";
 
 export class ConversationService {
   private geminiClient: GeminiAPIClient;
@@ -70,6 +74,9 @@ export class ConversationService {
     const wasIssueRegistrationConfirmation =
       lastMessage?.role === "ai" &&
       lastMessage.content.includes("Issue登録に進みます");
+    const wasIssueGenerationConfirmation =
+      lastMessage?.role === "ai" &&
+      lastMessage.content.includes("Issue案を生成します");
 
     const isPositive =
       /はい|OK|お願い|進めて|いいです|わかった|了解|うん|ええ|賛成|ぜひ|おねがい|おk|ok|y(es)?/i.test(
@@ -110,6 +117,36 @@ export class ConversationService {
       }
       // ここも曖昧な返答は通常フローに続行
     }
+
+    if (wasIssueGenerationConfirmation) {
+      if (isPositive) {
+        try {
+          const issues = await this.generateTasksFromSession(sessionId);
+          const issueList = issues
+            .map((i) => `- **${i.title}**\n  - ${i.description}`)
+            .join("\n\n");
+          const msg =
+            "要件定義書をもとに、以下のGitHub Issue案を生成しました。\n\n" +
+            issueList +
+            "\n\nこの内容でよろしければ、GitHubリポジトリを選択してIssue登録に進みます。よろしいですか？";
+          return this.saveMessage(sessionId, "ai", msg);
+        } catch (error) {
+          console.error("Issue案作成中にエラー", error);
+          return this.saveMessage(
+            sessionId,
+            "ai",
+            "Issue案の生成に失敗しました。少し時間が経過してから、もう一度お試しください。",
+          );
+        }
+      } else if (isNegative) {
+        return this.saveMessage(
+          sessionId,
+          "ai",
+          "承知しました。要件定義書のどこを修正したいですか？",
+        );
+      }
+    }
+
     // 3. 履歴を文字列に変換
     const historyText = session.messages
       .map((msg) => `${msg.role}: ${msg.content}`)
@@ -152,7 +189,24 @@ export class ConversationService {
     return this.saveMessage(sessionId, "ai", aiResponse);
   }
 
-  // 次のフェーズを返すヘルパーメソッド
+  // 要件定義書を生成するメソッド
+  private async generateRequirementsDocFromSession(
+    sessionId: string,
+  ): Promise<string> {
+    const session = await this.getSession(sessionId);
+    if (!session || session.messages.length === 0) {
+      throw new Error("要件定義書の生成に必要な会話履歴がありません");
+    }
+    const historyText = session.messages
+      .map((m) => `${m.role}: ${m.content}`)
+      .join("\n");
+    const prompt = REQUIREMENTS_DOC_TEMPLATE.replace("{HISTORY}", historyText);
+    const md = await this.geminiClient.generateContent(prompt);
+    // コードブロック除去+trim
+    const m = md.match(/^```(?:\w+)?\s*\n([\s\S]*?)\n?```$/m);
+    return (m ? m[1] : md).trim();
+  }
+
   // 対話履歴からIssueを生成するメソッド
   async generateTasksFromSession(sessionId: string): Promise<GeneratedIssue[]> {
     const session = await this.getSession(sessionId);
@@ -209,22 +263,15 @@ export class ConversationService {
     }
     if (phase === "tasks") {
       try {
-        console.log("⏳ タスク生成を開始します...");
-        const issues = await this.generateTasksFromSession(sessionId);
-
-        // 生成されたIssueをMarkdown形式のリストに変換
-        const issueList = issues
-          .map((issue) => `- **${issue.title}**\n  - ${issue.description}`)
-          .join("\n\n");
-
+        const reqDoc = await this.generateRequirementsDocFromSession(sessionId);
         return (
-          "ここまでの対話を基に、以下のGithub Issue案を生成しました。\n\n" +
-          issueList +
-          "\n\nこの内容でよろしければ、Githubリポジトリを選択して、Issue登録に進みます。よろしいですか？"
+          "ここまでの対話を基に、要件定義書を作成しました。\n\n" +
+          reqDoc +
+          "\n\nこの内容でよろしければ、Issue案を生成します。よろしいですか？"
         );
       } catch (error) {
-        console.error("タスク生成中にエラーが発生しました:", error);
-        return "申し訳ありません、タスクの生成中にエラーが発生しました。もう一度試しますか？";
+        console.error("要件定義書生成中にエラーが発生しました:", error);
+        return "申し訳ありません、要件定義書の生成中にエラーが発生しました。先にIssue案の生成に進みますか？";
       }
     }
     return "";
