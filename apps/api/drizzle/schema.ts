@@ -30,7 +30,7 @@ export const githubTokens = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }), // users.idへの外部キー
     accessToken: text("access_token").notNull(), // GitHub API呼び出し用トークン
-    refreshToken: text("refresh_token").notNull(), // アクセストークン更新用トークン
+    refreshToken: text("refresh_token"), // アクセストークン更新用トークン（nullableに変更）
     accessTokenExpiresAt: integer("access_token_expires_at").notNull(), // アクセストークンの有効期限 (UNIXタイムスタンプ秒)
     refreshTokenExpiresAt: integer("refresh_token_expires_at"), // リフレッシュトークンの有効期限 (UNIXタイムスタンプ秒, オプション)
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`), // 作成日時
