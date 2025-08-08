@@ -8,7 +8,7 @@
     "start": "wrangler dev src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply prism-db --local",
-    "db:migrate:prod": "wrangler d1 migrations apply prism-db",
+    "db:migrate:prod": "wrangler d1 migrations apply prism-db --remote",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

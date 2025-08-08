@@ -65,14 +65,17 @@ export class ConversationService {
       // ユーザーが「はい」など肯定的な返事をしたら、フェーズを更新
       if (
         userMessage.match(
-          /はい|OK|お願い|進めて|いい|わかった|了解|うん|ええ|賛成|もち|ぜひ|ye|おk|y/i,
+          /はい|OK|お願い|進めて|いい|わかった|了解|うん|ええ|賛成|もち|ぜひ|ye|おk|おねがい|y/i,
         )
       ) {
         const newPhase = this.getNextPhase(session.phase);
         if (newPhase) {
           await this.updatePhase(sessionId, newPhase);
           // 新しいフェーズの最初の質問を返す
-          const firstQuestion = this.getFirstQuestionForPhase(newPhase);
+          const firstQuestion = await this.getFirstQuestionForPhase(
+            newPhase,
+            sessionId,
+          );
           return this.saveMessage(sessionId, "ai", firstQuestion);
         }
       } else {
