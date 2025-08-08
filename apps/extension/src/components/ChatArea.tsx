@@ -9,7 +9,7 @@ export const ChatArea = () => {
     <div className="grow overflow-y-auto p-4">
       <div className="flex grow flex-col gap-4">
         {messages.map((m) =>
-          m.sender === "user" ? (
+          m.role === "user" ? (
             <UserQuery key={m.id} text={m.text} />
           ) : (
             <ModelResponse key={m.id} text={m.text} />
