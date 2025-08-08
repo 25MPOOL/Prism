@@ -114,7 +114,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const ws = get()._ws;
     set({ messages: [], isLoading: false });
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "session_create" }));
+      ws.send(JSON.stringify({ type: "session_create", data: null }));
     } else {
       get().connect();
     }
