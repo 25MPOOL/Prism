@@ -3,16 +3,9 @@ import { ChatInput } from "@/components/ChatInput";
 import { ChatArea } from "@/components/ChatArea";
 import "@/globals.css";
 import { useChat } from "@/hooks/useChat";
-import { useEffect } from "react";
 
 function SidePanel() {
-  const { connect, disconnect } = useChat();
-
-  useEffect(() => {
-    connect();
-
-    return () => disconnect();
-  }, [connect, disconnect]);
+  useChat();
 
   return (
     <AppLayout>
