@@ -1,7 +1,37 @@
+import { useCallback, useState } from "react";
+import { useChat } from "@/hooks/useChat";
+
 export const ChatInput = () => {
+  const { sendMessage, ready, isLoading } = useChat();
+  const [value, setValue] = useState("");
+
+  const handleSend = useCallback(() => {
+    const text = value.trim();
+    if (!text || isLoading) return;
+
+    sendMessage(text);
+    setValue("");
+  }, [value, isLoading, sendMessage]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend],
+  );
+
   return (
     <div className="w-full px-4 pb-4">
-      <form className="-outline-offset-1 rounded-xl border border-[#3d444d] outline-2 outline-[#316dca]">
+      <form
+        className="-outline-offset-1 rounded-xl border border-[#3d444d] outline-2 outline-[#316dca]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSend();
+        }}
+      >
         <div className="flex flex-col">
           <div className="whitespace-pre-wrap">
             <textarea
@@ -11,9 +41,11 @@ export const ChatInput = () => {
               spellCheck="false"
               aria-multiline="true"
               style={{ height: 56 }} // TODO: テキストエリアの高さを動的にする
-            >
-              aaaaaaa
-            </textarea>
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={!ready || isLoading}
+            />
           </div>
           <div className="flex items-center justify-between px-2 pb-2">
             {/* TODO: 追加ボタン (今後追加されるかも?) */}
@@ -42,7 +74,8 @@ export const ChatInput = () => {
             </button>
             {/* TODO: クリックした時に、Gemini APIにリクエストを送信する */}
             <button
-              type="button"
+              type="submit"
+              disabled={!ready || isLoading || !value.trim()}
               className="inline-grid h-8 w-8 flex-shrink-0 place-content-center rounded-md border border-transparent px-1.5 duration-75 hover:bg-[#656c7626]"
             >
               <svg
