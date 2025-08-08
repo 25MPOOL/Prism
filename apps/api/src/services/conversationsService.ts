@@ -104,7 +104,7 @@ export class ConversationService {
       }
       if (isNegative) {
         const reviseMessage =
-          "承知しました。Issue登録は保留します。修正したい点を教えてください。必要であれば『要件に戻る』と送って要件フェーズに戻すこともできます。";
+          "承知しました。Issue登録は保留します。修正したい点を教えてください。";
         return this.saveMessage(sessionId, "ai", reviseMessage);
       }
       // ここも曖昧な返答は通常フローに続行
