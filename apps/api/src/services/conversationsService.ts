@@ -5,9 +5,10 @@ import { conversations, messages } from "../../drizzle/schema";
 import type {
   ConversationMessage,
   ConversationSession,
+  GeneratedIssue,
 } from "../types/definitions";
 import type { D1Database } from "@cloudflare/workers-types";
-import { PROMPT_TEMPLATE, } from "./prompts";
+import { PROMPT_TEMPLATE, TASKS_GENERATION_TEMPLATE } from "./prompts";
 
 export class ConversationService {
   private geminiClient: GeminiAPIClient;
@@ -59,15 +60,26 @@ export class ConversationService {
       throw new Error("セッションが見つかりません");
     }
 
-    // 2-1. もし、直前のAIのメッセージがphase移行確認だったら
+    // 2-1. もし、直前のAIのメッセージが確認メッセージだったら（フェーズ遷移/Issue登録）
     const lastMessage = session.messages[session.messages.length - 1];
-    if (lastMessage?.role === "ai" && lastMessage.content.includes("")) {
-      // ユーザーが「はい」など肯定的な返事をしたら、フェーズを更新
-      if (
-        userMessage.match(
-          /はい|OK|お願い|進めて|いい|わかった|了解|うん|ええ|賛成|もち|ぜひ|ye|おk|おねがい|y/i,
-        )
-      ) {
+    const wasPhaseTransitionConfirmation =
+      lastMessage?.role === "ai" &&
+      (lastMessage.content.includes("フェーズに進み") ||
+        lastMessage.content.includes("フェーズに進んでもよろしいですか？"));
+    const wasIssueRegistrationConfirmation =
+      lastMessage?.role === "ai" &&
+      lastMessage.content.includes("Issue登録に進みます");
+
+    const isPositive =
+      /はい|OK|お願い|進めて|いいです|わかった|了解|うん|ええ|賛成|ぜひ|おねがい|おk|ok|y(es)?/i.test(
+        userMessage,
+      );
+    const isNegative = /いいえ|やめ|不要|戻|no|嫌|いえ|いや|保留|まだ/i.test(
+      userMessage,
+    );
+
+    if (wasPhaseTransitionConfirmation) {
+      if (isPositive) {
         const newPhase = this.getNextPhase(session.phase);
         if (newPhase) {
           await this.updatePhase(sessionId, newPhase);
@@ -78,11 +90,24 @@ export class ConversationService {
           );
           return this.saveMessage(sessionId, "ai", firstQuestion);
         }
-      } else {
+      } else if (isNegative) {
         const stayMessage =
           "承知いたしました。では、もう少し現在のフェーズについてお話ししましょう。他に何か追加したいことや、修正したい点はありますか？";
         return this.saveMessage(sessionId, "ai", stayMessage);
       }
+      // 肯定/否定どちらでもない曖昧な返答は、そのまま通常フローに続行
+    } else if (wasIssueRegistrationConfirmation) {
+      if (isPositive) {
+        const proceedMessage =
+          "ありがとうございます。では、GitHubリポジトリの選択に進みましょう。準備ができたらリポジトリ名を教えてください。";
+        return this.saveMessage(sessionId, "ai", proceedMessage);
+      }
+      if (isNegative) {
+        const reviseMessage =
+          "承知しました。Issue登録は保留します。修正したい点を教えてください。必要であれば『要件に戻る』と送って要件フェーズに戻すこともできます。";
+        return this.saveMessage(sessionId, "ai", reviseMessage);
+      }
+      // ここも曖昧な返答は通常フローに続行
     }
     // 3. 履歴を文字列に変換
     const historyText = session.messages
@@ -129,6 +154,41 @@ export class ConversationService {
   }
 
   // 次のフェーズを返すヘルパーメソッド
+  // 対話履歴からIssueを生成するメソッド
+  async generateTasksFromSession(sessionId: string): Promise<GeneratedIssue[]> {
+    const session = await this.getSession(sessionId);
+    if (!session || session.messages.length === 0) {
+      throw new Error("タスク生成のための十分な会話履歴がありません");
+    }
+
+    const historyText = session.messages
+      .map((msg) => `${msg.role}: ${msg.content}`)
+      .join("\n");
+
+    const prompt = TASKS_GENERATION_TEMPLATE.replace("{HISTORY}", historyText);
+
+    // Gemini APIで応答生成
+    const jsonResponse = await this.geminiClient.generateContent(prompt);
+
+    try {
+      // AIがMarkdownのコードブロックを付けてくる場合があるので、それを取り除く
+      const cleanJson = jsonResponse
+        .replace(/^```json\n/, "")
+        .replace(/\n```$/, "");
+      const issues: GeneratedIssue[] = JSON.parse(cleanJson);
+      return issues;
+    } catch (error) {
+      console.error(
+        "AIからのJSON応答の解析に失敗しました:",
+        jsonResponse,
+        error,
+      );
+      throw new Error(
+        "タスクの生成に失敗しました。AIの応答形式が正しくありません。",
+      );
+    }
+  }
+
   private getNextPhase(
     currentPhase: "idea" | "requirements" | "tasks",
   ): "requirements" | "tasks" | null {
@@ -138,12 +198,33 @@ export class ConversationService {
   }
 
   // 各フェーズの最初の質問を返すヘルパーメソッド
-  private getFirstQuestionForPhase(phase: "requirements" | "tasks"): string {
+  private async getFirstQuestionForPhase(
+    phase: "requirements" | "tasks",
+    sessionId: string,
+  ): Promise<string> {
     if (phase === "requirements") {
       return "ありがとうございます。では、このアプリに必要な機能を一緒に考えていきましょう。まずは思いつくままに、どんな機能が欲しいかリストアップしてもらえますか？";
     }
     if (phase === "tasks") {
-      return "この内容でよろしければ、GitHubリポジトリを選択して、Issue登録に進みます。よろしいですか？";
+      try {
+        console.log("⏳ タスク生成を開始します...");
+        const issues = await this.generateTasksFromSession(sessionId);
+
+        // 生成されたIssueをMarkdown形式のリストに変換
+        const issueList = issues
+          .map((issue) => `- **${issue.title}**\n  - ${issue.description}`)
+          .join("\n\n");
+
+        return (
+          "ここまでの対話を基に、以下のGithub Issue案を生成しました。\n\n" +
+          issueList +
+          "\n\nこの内容でよろしければ、Githubリポジトリを選択して、Issue登録に進みます。よろしいですか？" +
+          "\n" //ユーザーへの最終確認のため、合言葉を追加
+        );
+      } catch (error) {
+        console.error("タスク生成中にエラーが発生しました:", error);
+        return "申し訳ありません、タスクの生成中にエラーが発生しました。もう一度試しますか？";
+      }
     }
     return "";
   }
