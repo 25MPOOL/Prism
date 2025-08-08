@@ -1,7 +1,6 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { trim } from "zod";
 import { conversations, messages } from "../../drizzle/schema";
 import type {
   ConversationMessage,
@@ -174,8 +173,9 @@ export class ConversationService {
       const codeBlockMatch = jsonResponse.match(
         /^```(?:\w+)?\s*\n([\s\S]*?)\n?```$/m,
       );
-      const cleanJson = codeBlockMatch ? codeBlockMatch[1] : jsonResponse;
-      trim();
+      const cleanJson = (
+        codeBlockMatch ? codeBlockMatch[1] : jsonResponse
+      ).trim();
       const issues: GeneratedIssue[] = JSON.parse(cleanJson);
       return issues;
     } catch (error) {
