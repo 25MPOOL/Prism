@@ -169,10 +169,11 @@ export class ConversationService {
     const jsonResponse = await this.geminiClient.generateContent(prompt);
 
     try {
-      // AIがMarkdownのコードブロックを付けてくる場合があるので、それを取り除く
-      const cleanJson = jsonResponse
-        .replace(/^```json\n/, "")
-        .replace(/\n```$/, "");
+      // より堅牢な正規表現でMarkdownコードブロックを除去
+      const codeBlockMatch = jsonResponse.match(
+        /^```(?:\w+)?\s*\n([\s\S]*?)\n?```$/m,
+      );
+      const cleanJson = codeBlockMatch ? codeBlockMatch[1] : jsonResponse;
       const issues: GeneratedIssue[] = JSON.parse(cleanJson);
       return issues;
     } catch (error) {
@@ -182,7 +183,7 @@ export class ConversationService {
         error,
       );
       throw new Error(
-        "タスクの生成に失敗しました。AIの応答形式が正しくありません。",
+        "タスクの生成に失敗しました。AIの応答形式が正しくありません。しばらく時間をおいて再試行してください。",
       );
     }
   }

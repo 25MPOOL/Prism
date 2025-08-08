@@ -51,7 +51,7 @@ websocket.get("/connect", async (c) => {
       let message: WebSocketMessage;
       try {
         message = JSON.parse(text);
-      } catch {
+      } catch (_e) {
         sendError(server, "Invalid message, JSON parse error");
         return;
       }
