@@ -1,4 +1,7 @@
-import type { GitHubTokenResponse } from "../../types/github"; // 型定義をインポート
+import type {
+  GitHubTokenResponse,
+  GitHubUserProfile,
+} from "../../types/github"; // 型定義をインポート
 
 /**
  * GitHubの認証コードを使ってアクセストークンを交換する関数。
@@ -43,6 +46,39 @@ export async function exchangeCodeForTokens(
     return data;
   } catch (error) {
     console.error("Error during token exchange:", error);
+    return null;
+  }
+}
+
+/**
+ * GitHubのアクセストークンを使ってユーザープロファイルを取得する関数。
+ * @param accessToken GitHubアクセストークン
+ * @returns GitHubユーザープロファイルオブジェクト、またはnull
+ */
+export async function getGitHubUserProfile(
+  accessToken: string,
+): Promise<GitHubUserProfile | null> {
+  try {
+    const response = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `token ${accessToken}`, // アクセストークンをヘッダーに含める
+        "User-Agent": "Prism-extension", // GitHub APIの要件: User-Agentヘッダー
+      },
+    });
+
+    if (!response.ok) {
+      console.error(
+        `Failed to get GitHub user profile: ${response.status} ${response.statusText}`,
+      );
+      const errorData = await response.json();
+      console.error("Error details:", errorData);
+      return null;
+    }
+
+    const userProfile: GitHubUserProfile = await response.json();
+    return userProfile;
+  } catch (error) {
+    console.error("Error fetching GitHub user profile:", error);
     return null;
   }
 }
