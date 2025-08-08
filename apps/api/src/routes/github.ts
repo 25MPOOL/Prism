@@ -22,6 +22,19 @@ githubRouter.get("/oauth", async (c) => {
   const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
   const GITHUB_REDIRECT_URI = c.env.GITHUB_REDIRECT_URI;
 
+  // 拡張機能から渡されたリダイレクト先URLを取得
+  const extRedirect = c.req.query("extRedirect");
+  if (extRedirect) {
+    // Cookieに拡張機能の戻り先を保存（10分）
+    setCookie(c, "ext_redirect", extRedirect, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Lax",
+      path: "/",
+      maxAge: 600,
+    });
+  }
+
   // CSRF攻撃を防ぐための一意なstate文字列を生成
   const state = crypto.randomUUID();
 
@@ -59,13 +72,13 @@ githubRouter.get("/callback", async (c) => {
     return c.text("Invalid state parameter. Possible CSRF attack.", 400);
   }
   // 使い捨て: Cookie削除
-  setCookie(c, "github_oauth_state", "", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "Lax",
-    path: "/",
-    maxAge: 0,
-  });
+  // setCookie(c, "github_oauth_state", "", {
+  //   httpOnly: true,
+  //   secure: true,
+  //   sameSite: "Lax",
+  //   path: "/",
+  //   maxAge: 0,
+  // });
 
   // 以下、トークン交換へ続行…
 
@@ -105,33 +118,16 @@ githubRouter.get("/callback", async (c) => {
     console.log("Authentication successful for user:", user.githubUsername);
     console.log("Access Token saved/updated for userId:", user.id);
 
-    // 認証成功のHTMLレスポンス (テスト用)
-    return c.html(`
-      <html lang="ja">
-        <head>
-          <title>認証成功</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-          <style>
-            body { font-family: 'Inter', sans-serif; }
-          </style>
-        </head>
-        <body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
-          <div class="bg-gray-800 rounded-lg shadow-lg p-8 max-w-md w-full text-center rounded-xl">
-            <h1 class="text-3xl font-bold mb-4 text-green-400">認証成功！</h1>
-            <p class="text-lg mb-6 text-gray-300">GitHubアカウントとの連携が完了し、トークンが保存されました。</p>
-            <div class="bg-gray-700 p-4 rounded-md text-left break-all text-sm mb-4">
-              <h2 class="font-semibold mb-2 text-gray-400">認証済みユーザー:</h2>
-              <p><strong>Prism User ID:</strong> ${user.id}</p>
-              <p><strong>GitHub Username:</strong> ${user.githubUsername}</p>
-              <p><strong>GitHub ID:</strong> ${user.githubId}</p>
-            </div>
-            <a href="/" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 inline-block">
-              トップに戻る
-            </a>
-          </div>
-        </body>
-      </html>
-    `);
+    const extRedirect = getCookie(c, "ext_redirect");
+
+    if (extRedirect) {
+      // Cookieに保存された拡張機能のURLがあれば、そこに成功フラグを付けてリダイレクト
+      setCookie(c, "ext_redirect", "", { maxAge: 0 }); // Cookieを削除
+      return c.redirect(`${extRedirect}#success=1`);
+    }
+
+    // 拡張機能からの要求でなければ、通常のWebページ向けの成功画面を返す
+    return c.html("<h1>Authentication Successful!</h1>");
   } catch (error) {
     console.error("GitHub OAuth callback error:", error);
     return c.json(
