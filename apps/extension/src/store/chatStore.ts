@@ -4,7 +4,7 @@ import { WebSocketManager } from "@/lib/websocket-manager";
 interface UiMessage {
   id: string;
   role: "user" | "ai";
-  text: string;
+  content: string;
 }
 
 interface ChatState {
@@ -16,7 +16,7 @@ interface ChatState {
   _manager: WebSocketManager<ServerMessage, ClientMessage> | null;
   connect: () => void;
   disconnect: () => void;
-  sendMessage: (text: string) => void;
+  sendMessage: (content: string) => void;
   newChat: () => void;
   reset: () => void;
 }
@@ -72,7 +72,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               isLoading: false,
               messages: [
                 ...s.messages,
-                { id: m.id, role: m.role, text: m.text },
+                { id: m.id, role: m.role, content: m.content },
               ],
             }));
             break;
@@ -111,7 +111,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     get()._manager?.disconnect();
   },
 
-  sendMessage: (text: string) => {
+  sendMessage: (content: string) => {
     const { _manager, sessionId } = get();
     if (!sessionId) {
       console.error("No session ID.");
@@ -121,13 +121,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((s) => ({
       messages: [
         ...s.messages,
-        { id: crypto.randomUUID(), role: "user", text },
+        { id: crypto.randomUUID(), role: "user", content },
       ],
       isLoading: true,
       error: null,
     }));
 
-    _manager?.send({ type: "chat", data: { sessionId, message: text } });
+    _manager?.send({ type: "chat", data: { sessionId, message: content } });
   },
 
   newChat: () => {

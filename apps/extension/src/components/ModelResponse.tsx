@@ -2,11 +2,11 @@ import { memo } from "react";
 import PrismLogo from "@assets/prism.png";
 
 interface ModelResponseProps {
-  text: string;
+  content: string;
 }
 
 export const ModelResponse = memo((props: ModelResponseProps) => {
-  const { text } = props;
+  const { content } = props;
 
   return (
     <div className="w-full">
@@ -15,7 +15,7 @@ export const ModelResponse = memo((props: ModelResponseProps) => {
         <div className="flex h-8 w-8 items-center justify-center">
           <img src={PrismLogo} alt="prism" />
         </div>
-        <div className="whitespace-pre-wrap leading-6">{text}</div>
+        <div className="whitespace-pre-wrap leading-6">{content}</div>
       </div>
     </div>
   );
