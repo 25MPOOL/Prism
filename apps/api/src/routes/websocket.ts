@@ -28,7 +28,7 @@ websocket.get("/connect", async (c) => {
 
   const conversationService = new ConversationService(apiKey, database);
 
-  // server側トランシーバーの起動
+  // server側トランシーバーを起動
   server.accept();
 
   // サーバーの耳（何か受信したら常に実行される）
