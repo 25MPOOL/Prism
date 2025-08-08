@@ -1,5 +1,5 @@
 import { useChatStore } from "@/store/chatStore";
-import { useCallback, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 export const useChat = (opts: { autoConnect?: boolean } = {}) => {
   const { autoConnect = true } = opts;
@@ -10,6 +10,8 @@ export const useChat = (opts: { autoConnect?: boolean } = {}) => {
   const sendMessage = useChatStore((s) => s.sendMessage);
   const connect = useChatStore((s) => s.connect);
   const disconnect = useChatStore((s) => s.disconnect);
+  const newChat = useChatStore((s) => s.newChat);
+  const reset = useChatStore((s) => s.reset);
 
   useEffect(() => {
     if (!autoConnect) return;
@@ -27,10 +29,6 @@ export const useChat = (opts: { autoConnect?: boolean } = {}) => {
     [messages],
   );
 
-  const reset = useCallback(() => {
-    useChatStore.setState({ messages: [], isLoading: false });
-  }, []);
-
   return {
     messages,
     firstMessage,
@@ -40,6 +38,7 @@ export const useChat = (opts: { autoConnect?: boolean } = {}) => {
     disconnect,
     sendMessage,
     ready,
+    newChat,
     reset,
   };
 };

@@ -1,8 +1,9 @@
 import { create } from "zustand";
+import { WebSocketManager } from "@/lib/websocket-manager";
 
 interface UiMessage {
   id: string;
-  sender: "user" | "ai";
+  role: "user" | "ai";
   text: string;
 }
 
@@ -11,12 +12,35 @@ interface ChatState {
   isConnected: boolean;
   isLoading: boolean;
   sessionId: string | null;
-  _ws: WebSocket | null;
+  error: string | null;
+  _manager: WebSocketManager<ServerMessage, ClientMessage> | null;
   connect: () => void;
   disconnect: () => void;
   sendMessage: (text: string) => void;
   newChat: () => void;
+  reset: () => void;
 }
+
+type ServerMessage =
+  | { type: "session_created"; data: { session: { id: string } } }
+  | {
+      type: "chat_response";
+      data: {
+        message: UiMessage;
+      };
+    }
+  | { type: "error"; data: { error?: string } }
+  | { type: "pong"; data: { timestamp: string } };
+
+type ClientMessage =
+  | {
+      type: "session_create";
+      data: null;
+    }
+  | {
+      type: "chat";
+      data: { sessionId: string; message: string };
+    };
 
 const WS_URL = "wss://prism-api.kaitomichigan22.workers.dev/ws/connect";
 
@@ -25,98 +49,99 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isConnected: false,
   isLoading: false,
   sessionId: null,
-  _ws: null,
+  error: null,
+  _manager: null,
 
   connect: () => {
-    const curr = get()._ws;
-    if (
-      curr &&
-      (curr.readyState === WebSocket.OPEN ||
-        curr.readyState === WebSocket.CONNECTING)
-    )
-      return;
+    if (get()._manager) return;
 
-    const ws = new WebSocket(WS_URL);
-    set({ _ws: ws });
-
-    ws.onopen = () => {
-      set({ isConnected: true });
-      ws.send(JSON.stringify({ type: "session_create", data: null }));
-    };
-
-    ws.onmessage = (ev) => {
-      const data = JSON.parse(ev.data) as
-        | { type: "session_created"; data: { session: { id: string } } }
-        | {
-            type: "chat_response";
-            data: {
-              message: { id: string; role: "user" | "ai"; content: string };
-            };
+    const manager = new WebSocketManager<ServerMessage, ClientMessage>(WS_URL, {
+      onOpen: (m) => {
+        set({ isConnected: true, isLoading: false });
+        m.send({ type: "session_create", data: null });
+      },
+      onMessage: (data) => {
+        switch (data.type) {
+          case "session_created": {
+            set({ sessionId: data.data.session.id });
+            break;
           }
-        | { type: "error"; data: { error?: string } }
-        | { type: "pong"; data: { timestamp: string } };
+          case "chat_response": {
+            const m = data.data.message;
+            set((s) => ({
+              isLoading: false,
+              messages: [
+                ...s.messages,
+                { id: m.id, role: m.role, text: m.text },
+              ],
+            }));
+            break;
+          }
+          case "error": {
+            console.error("WS error:", data.data?.error);
+            set({
+              isLoading: false,
+              error: data.data?.error || "Unknown error",
+            });
+            break;
+          }
+          case "pong": {
+            // pong受信時のロジック (例: 最終受信時刻の更新など)
+            break;
+          }
+        }
+      },
+      onError: () => {
+        set({
+          isConnected: false,
+          isLoading: false,
+          error: "WebSocket connection failed.",
+        });
+      },
+      onClose: () => {
+        set({ isConnected: false, sessionId: null, _manager: null });
+      },
+    });
 
-      if (data.type === "session_created") {
-        set({ sessionId: data.data.session.id });
-        return;
-      }
-      if (data.type === "chat_response") {
-        set({ isLoading: false });
-        const m = data.data.message;
-        set((s) => ({
-          messages: [
-            ...s.messages,
-            { id: m.id, sender: m.role, text: m.content },
-          ],
-        }));
-        return;
-      }
-      if (data.type === "error") {
-        set({ isLoading: false });
-        console.error("WS error:", data.data?.error);
-      }
-    };
-
-    ws.onerror = (e) => {
-      console.error("WS error:", e);
-      set({ isConnected: false, isLoading: false });
-    };
-
-    ws.onclose = () => {
-      set({ isConnected: false, sessionId: null, _ws: null });
-    };
+    set({ _manager: manager, isLoading: true, error: null });
+    manager.connect();
   },
+
   disconnect: () => {
-    const ws = get()._ws;
-    ws?.close();
+    get()._manager?.disconnect();
   },
 
   sendMessage: (text: string) => {
-    const ws = get()._ws;
-    const sid = get().sessionId;
-    if (!ws || ws.readyState !== WebSocket.OPEN || !sid) {
-      console.error("WebSocket not ready or no session");
+    const { _manager, sessionId } = get();
+    if (!sessionId) {
+      console.error("No session ID.");
       return;
     }
+
     set((s) => ({
       messages: [
         ...s.messages,
-        { id: crypto.randomUUID(), sender: "user", text },
+        { id: crypto.randomUUID(), role: "user", text },
       ],
       isLoading: true,
+      error: null,
     }));
-    ws.send(
-      JSON.stringify({ type: "chat", data: { sessionId: sid, message: text } }),
-    );
+
+    _manager?.send({ type: "chat", data: { sessionId, message: text } });
   },
 
   newChat: () => {
-    const ws = get()._ws;
-    set({ messages: [], isLoading: false });
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: "session_create", data: null }));
+    set({ messages: [], isLoading: false, error: null });
+    const manager = get()._manager;
+    if (manager && manager.getReadyState() === WebSocket.OPEN) {
+      manager.send({ type: "session_create", data: null });
     } else {
       get().connect();
     }
+  },
+
+  reset: () => {
+    get().disconnect();
+    set({ messages: [], isLoading: false, error: null });
   },
 }));
