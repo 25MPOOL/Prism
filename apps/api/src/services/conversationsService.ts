@@ -132,14 +132,12 @@ export class ConversationService {
         case "requirements":
           confirmationMessage =
             "ありがとうございます。アイデアの輪郭が見えてきましたね！\n" +
-            "次の「要件定義」フェーズに進み、具体的な機能を一緒に考えていきませんか？" +
-            "\n";
+            "次の「要件定義」フェーズに進み、具体的な機能を一緒に考えていきませんか？";
           break;
         case "tasks":
           confirmationMessage =
             "機能要件がかなり具体的になりましたね！素晴らしいです。\n" +
-            "これを元に、開発タスクを洗い出す**「タスク化」**フェーズに進んでもよろしいですか？" +
-            "\n";
+            "これを元に、開発タスクを洗い出す**「タスク化」**フェーズに進んでもよろしいですか？";
           break;
         // tasksフェーズからは移行しないが念のため
         default:
@@ -218,8 +216,7 @@ export class ConversationService {
         return (
           "ここまでの対話を基に、以下のGithub Issue案を生成しました。\n\n" +
           issueList +
-          "\n\nこの内容でよろしければ、Githubリポジトリを選択して、Issue登録に進みます。よろしいですか？" +
-          "\n" //ユーザーへの最終確認のため、合言葉を追加
+          "\n\nこの内容でよろしければ、Githubリポジトリを選択して、Issue登録に進みます。よろしいですか？"
         );
       } catch (error) {
         console.error("タスク生成中にエラーが発生しました:", error);
