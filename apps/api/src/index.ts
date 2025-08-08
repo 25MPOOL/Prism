@@ -102,7 +102,7 @@ app.get("/db/test-user", async (c) => {
 
   try {
     // 1. users テーブルにデータを挿入 (または既存ユーザーを更新)
-    const testGithubId = 123456789; // テスト用のGitHub ID
+    const testGithubId = -12345; // テスト用のGitHub ID（本番IDと衝突しない負の値を使用）
     const testGithubUsername = "testuser_prism"; // テスト用のユーザー名
 
     // upsert (挿入または更新) のロジック
