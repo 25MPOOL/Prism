@@ -15,6 +15,7 @@ interface ChatState {
   connect: () => void;
   disconnect: () => void;
   sendMessage: (text: string) => void;
+  newChat: () => void;
 }
 
 const WS_URL = "wss://prism-api.kaitomichigan22.workers.dev/ws/connect";
