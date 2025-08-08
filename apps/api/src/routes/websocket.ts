@@ -28,15 +28,39 @@ websocket.get("/connect", async (c) => {
 
   const conversationService = new ConversationService(apiKey, database);
 
-  // server側トランシーバーの起動
+  // server側トランシーバーを起動
   server.accept();
 
   // サーバーの耳（何か受信したら常に実行される）
   server.addEventListener("message", async (event) => {
     try {
-      // 受信の内容(event)を解読
-      const message: WebSocketMessage = JSON.parse(event.data as string);
-      // その受信をそれぞれの役目にまかせる
+      const raw = event.data;
+      let text: string;
+
+      if (typeof raw === "string") {
+        text = raw;
+      } else if (raw instanceof ArrayBuffer) {
+        text = new TextDecoder().decode(raw);
+      } else if (ArrayBuffer.isView(raw)) {
+        text = new TextDecoder().decode(raw.buffer);
+      } else {
+        sendError(server, "Unsupported message data type");
+        return;
+      }
+
+      let message: WebSocketMessage;
+      try {
+        message = JSON.parse(text);
+      } catch (_e) {
+        sendError(server, "Invalid message, JSON parse error");
+        return;
+      }
+
+      if (!message || typeof message.type !== "string") {
+        sendError(server, "Invalid message, missing 'type'");
+        return;
+      }
+
       await handleWebSocketMessage(server, message, conversationService);
     } catch (error) {
       console.error("WebSocket message error:", error);
@@ -57,14 +81,15 @@ async function handleWebSocketMessage(
   conversationService: ConversationService,
 ) {
   switch (message.type) {
-    case "chat":
-      await handleChat(
-        webSocket,
-        message.data as ChatMessageData,
-        message.messageId,
-        conversationService,
-      );
+    case "chat": {
+      const d = message.data as unknown;
+      if (!isChatMessageData(d)) {
+        sendError(webSocket, "Invalid chat payload");
+        return;
+      }
+      await handleChat(webSocket, d, message.messageId, conversationService);
       break;
+    }
     case "session_create":
       await handleSessionCreate(
         webSocket,
@@ -133,6 +158,12 @@ function sendError(webSocket: WebSocket, error: string) {
   };
 
   webSocket.send(JSON.stringify(wsResponse));
+}
+
+function isChatMessageData(v: unknown): v is ChatMessageData {
+  if (typeof v !== "object" || v === null) return false;
+  const obj = v as { sessionId?: unknown; message?: unknown };
+  return typeof obj.sessionId === "string" && typeof obj.message === "string";
 }
 
 export { websocket };

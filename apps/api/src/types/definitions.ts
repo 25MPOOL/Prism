@@ -58,6 +58,11 @@ export interface ChatResponseData {
   message: ConversationMessage;
 }
 
+export interface GeneratedIssue {
+  title: string;
+  description: string;
+}
+
 export interface SessionCreatedData {
   session: ConversationSession;
 }
