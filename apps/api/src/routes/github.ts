@@ -7,6 +7,7 @@ import { findOrCreateUser, saveGitHubTokens } from "../services/user"; // findOr
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type * as schema from "../../drizzle/schema";
 import type { AppEnv } from "../types/definitions"; // AppEnvをインポート
+import { getCookie, setCookie } from "hono/cookie";
 
 // GitHub関連のルートを管理するためのHonoインスタンスを作成します。
 // Bindingsの型としてAppEnv自体を使用します。
@@ -22,7 +23,16 @@ githubRouter.get("/oauth", async (c) => {
   const GITHUB_REDIRECT_URI = c.env.GITHUB_REDIRECT_URI;
 
   // CSRF攻撃を防ぐための一意なstate文字列を生成
-  const state = Math.random().toString(36).substring(2);
+  const state = crypto.randomUUID();
+
+  //  CSRF対策: stateをcookieに保存（10分）
+  setCookie(c, "github_oauth_state", state, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: 600,
+  });
 
   // ⚠️ 注意: 実際のアプリケーションでは、このstateをセッションなどに保存し、
   // コールバック時に検証する必要があります。
@@ -39,12 +49,25 @@ githubRouter.get("/callback", async (c) => {
   const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
 
   const code = c.req.query("code");
-  const _state = c.req.query("state"); // stateはCSRF対策に必要だが、ここでは未使用
+  const returnedState = c.req.query("state");
+  const storedState = getCookie(c, "github_oauth_state");
 
-  // 認証コードがない場合はエラー
-  if (!code) {
-    return c.text("No code provided", 400);
+  if (!code) return c.text("No code provided", 400);
+
+  // CSRF対策: state検証
+  if (!returnedState || !storedState || returnedState !== storedState) {
+    return c.text("Invalid state parameter. Possible CSRF attack.", 400);
   }
+  // 使い捨て: Cookie削除
+  setCookie(c, "github_oauth_state", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: 0,
+  });
+
+  // 以下、トークン交換へ続行…
 
   // DBインスタンスをコンテキストから取得
   // AppContextを使わない場合、c.get()の戻り値はany型になるため、D1Database型にキャストします。
