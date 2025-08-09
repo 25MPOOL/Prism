@@ -43,6 +43,8 @@ websocket.get("/connect", async (c) => {
       const raw = event.data;
       let text: string;
 
+      console.log("raw", raw);
+
       if (typeof raw === "string") {
         text = raw;
       } else if (raw instanceof ArrayBuffer) {
@@ -61,6 +63,8 @@ websocket.get("/connect", async (c) => {
         sendError(server, "Invalid message, JSON parse error");
         return;
       }
+
+      console.log("message", message);
 
       if (!message || typeof message.type !== "string") {
         sendError(server, "Invalid message, missing 'type'");

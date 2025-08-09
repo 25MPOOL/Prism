@@ -66,26 +66,52 @@ export class ConversationService {
       throw new Error("セッションが見つかりません");
     }
 
-    // 2-1. もし、直前のAIのメッセージが確認メッセージだったら（フェーズ遷移/Issue登録）
-    const lastMessage = session.messages[session.messages.length - 1];
+    // 2-1. 直前のAIメッセージをチェック（ユーザーメッセージの1つ前のAIメッセージ）
+    const lastAiMessage = session.messages
+      .filter((m) => m.role === "ai")
+      .slice(-1)[0]; // 最後のAIメッセージを取得
+    console.log("🔍 デバッグ: 最後のAIメッセージ", {
+      role: lastAiMessage?.role,
+      content: lastAiMessage?.content?.substring(0, 100),
+    });
+
     const wasPhaseTransitionConfirmation =
-      lastMessage?.role === "ai" &&
-      (lastMessage.content.includes("フェーズに進み") ||
-        lastMessage.content.includes("フェーズに進んでもよろしいですか？"));
+      lastAiMessage?.role === "ai" &&
+      (lastAiMessage.content.includes("フェーズに進み") ||
+        lastAiMessage.content.includes("フェーズに進んでもよろしいですか？"));
+
+    console.log("🔍 デバッグ: フェーズ移行確認判定", {
+      wasPhaseTransitionConfirmation,
+      userMessage,
+    });
     const wasIssueRegistrationConfirmation =
-      lastMessage?.role === "ai" &&
-      lastMessage.content.includes("Issue登録に進みます");
+      lastAiMessage?.role === "ai" &&
+      lastAiMessage.content.includes("Issue登録に進みます");
     const wasIssueGenerationConfirmation =
-      lastMessage?.role === "ai" &&
-      lastMessage.content.includes("Issue案を生成します");
+      lastAiMessage?.role === "ai" &&
+      lastAiMessage.content.includes("Issue案を生成します");
+
+    console.log("🔍 デバッグ: Issue関連判定", {
+      wasIssueRegistrationConfirmation,
+      wasIssueGenerationConfirmation,
+      lastAiContent: lastAiMessage?.content?.substring(0, 150),
+    });
 
     const isPositive =
-      /はい|OK|お願い|進めて|いいです|わかった|了解|うん|ええ|賛成|ぜひ|おねがい|おk|ok|y(es)?/i.test(
+      /はい|OK|お願い|進めて|いい|わかった|了解|うん|ええ|賛成|ぜひ|おねがい|おk|ok|うい|大丈夫|y(es)?/i.test(
         userMessage,
       );
     const isNegative = /いいえ|やめ|不要|戻|no|嫌|いえ|いや|保留|まだ/i.test(
       userMessage,
     );
+
+    console.log("🔍 デバッグ: 肯定/否定判定", {
+      userMessage,
+      isPositive,
+      isNegative,
+    });
+
+    // 2-2. フェーズ移行確認への回答処理（回数制限チェックより優先）
 
     if (wasPhaseTransitionConfirmation) {
       if (isPositive) {
@@ -148,6 +174,49 @@ export class ConversationService {
       }
     }
 
+    // 2-3. 回数制限チェック（確認メッセージ処理の後に実行）
+    const userMessagesInPhase = session.messages.filter(
+      (m) => m.role === "user",
+    ).length;
+
+    // 最近にフェーズ移行を拒否されたかチェック
+    const recentMessages = session.messages.slice(-4); // 直近4メッセージをチェック
+    const recentlyRejectedTransition = recentMessages.some(
+      (msg) =>
+        msg.role === "ai" &&
+        msg.content.includes("もう少し現在のフェーズについてお話ししましょう"),
+    );
+
+    // `idea`フェーズで、ユーザーの発言が4回に達し、かつ最近拒否されていない場合のみ移行を提案
+    if (
+      session.phase === "idea" &&
+      userMessagesInPhase >= 4 &&
+      !recentlyRejectedTransition
+    ) {
+      console.log(
+        "🗣️ ideaフェーズの対話回数が上限に達したため、移行を提案します。",
+      );
+      const confirmationMessage =
+        "ありがとうございます。アイデアの輪郭が見えてきましたね！\n" +
+        "次の**「要件定義」**フェーズに進み、具体的な機能を一緒に考えていきませんか？";
+      return this.saveMessage(sessionId, "ai", confirmationMessage);
+    }
+
+    // `requirements`フェーズで、ユーザーの発言が6回に達し、かつ最近拒否されていない場合のみ移行を提案
+    if (
+      session.phase === "requirements" &&
+      userMessagesInPhase >= 5 &&
+      !recentlyRejectedTransition
+    ) {
+      console.log(
+        "🗣️ requirementsフェーズの対話回数が上限に達したため、移行を提案します。",
+      );
+      const confirmationMessage =
+        "機能要件がかなり具体的になりましたね！素晴らしいです。\n" +
+        "これを元に、開発タスクを洗い出す**「タスク化」**フェーズに進んでもよろしいですか？";
+      return this.saveMessage(sessionId, "ai", confirmationMessage);
+    }
+
     // 3. 履歴を文字列に変換
     const historyText = session.messages
       .map((msg) => `${msg.role}: ${msg.content}`)
@@ -159,7 +228,22 @@ export class ConversationService {
       .replace("{USER_MESSAGE}", userMessage);
 
     // 5. Gemini APIで応答生成
-    const aiResponse = await this.geminiClient.generateContent(prompt);
+    let aiResponse: string;
+    try {
+      aiResponse = await this.geminiClient.generateContent(prompt);
+    } catch (error) {
+      if (
+        error.message.includes("quota") ||
+        error.message.includes("rate limit")
+      ) {
+        return this.saveMessage(
+          sessionId,
+          "ai",
+          "申し訳ありません。現在APIの利用制限に達しています。しばらく時間をおいてから再度お試しください。",
+        );
+      }
+      throw error;
+    }
 
     // 6. AIからの「合言葉」をチェック
     if (aiResponse.trim() === "[TRANSITION_SUGGESTION]") {
@@ -202,7 +286,20 @@ export class ConversationService {
       .map((m) => `${m.role}: ${m.content}`)
       .join("\n");
     const prompt = REQUIREMENTS_DOC_TEMPLATE.replace("{HISTORY}", historyText);
-    const md = await this.geminiClient.generateContent(prompt);
+    let md: string;
+    try {
+      md = await this.geminiClient.generateContent(prompt);
+    } catch (error) {
+      if (
+        error.message.includes("quota") ||
+        error.message.includes("rate limit")
+      ) {
+        throw new Error(
+          "APIの利用制限に達しています。しばらく時間をおいてから再度お試しください。",
+        );
+      }
+      throw error;
+    }
     // コードブロック除去+trim
     const m = md.match(/^```(?:\w+)?\s*\n([\s\S]*?)\n?```$/m);
     return (m ? m[1] : md).trim();
@@ -212,7 +309,7 @@ export class ConversationService {
   async generateTasksFromSession(sessionId: string): Promise<GeneratedIssue[]> {
     const session = await this.getSession(sessionId);
     if (!session || session.messages.length === 0) {
-      throw new Error("タスク生成のための十分な会話履歴がありません");
+      throw new Error("Issue生成のための十分な会話履歴がありません");
     }
 
     const historyText = session.messages
@@ -222,7 +319,20 @@ export class ConversationService {
     const prompt = TASKS_GENERATION_TEMPLATE.replace("{HISTORY}", historyText);
 
     // Gemini APIで応答生成
-    const jsonResponse = await this.geminiClient.generateContent(prompt);
+    let jsonResponse: string;
+    try {
+      jsonResponse = await this.geminiClient.generateContent(prompt);
+    } catch (error) {
+      if (
+        error.message.includes("quota") ||
+        error.message.includes("rate limit")
+      ) {
+        throw new Error(
+          "APIの利用制限に達しています。しばらく時間をおいてから再度お試しください。",
+        );
+      }
+      throw error;
+    }
 
     try {
       // より堅牢な正規表現でMarkdownコードブロックを除去
@@ -241,7 +351,7 @@ export class ConversationService {
         error,
       );
       throw new Error(
-        "タスクの生成に失敗しました。AIの応答形式が正しくありません。しばらく時間をおいて再試行してください。",
+        "Issueの生成に失敗しました。AIの応答形式が正しくありません。しばらく時間をおいて再試行してください。",
       );
     }
   }
@@ -272,7 +382,7 @@ export class ConversationService {
         );
       } catch (error) {
         console.error("要件定義書生成中にエラーが発生しました:", error);
-        return "申し訳ありません、要件定義書の生成中にエラーが発生しました。先にIssue案の生成に進みますか？";
+        return "申し訳ありません、要件定義書の生成中にエラーが発生しました。もう少し時間が経ちましたら再試行してください。";
       }
     }
     return "";

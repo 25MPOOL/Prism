@@ -81,7 +81,7 @@ conversations.post("/auth/logout", async (c) => {
   setCookie(c, "prism_uid", "", {
     httpOnly: true,
     secure: true,
-    sameSite: "Lax",
+    sameSite: "None",
     path: "/",
     maxAge: 0,
   });
