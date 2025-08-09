@@ -70,6 +70,8 @@ export interface GitHubRepository {
   owner: {
     login: string;
     id: number;
+    avatar_url: string;
+    type: "User" | "Organization" | string;
   };
   html_url: string;
   description: string | null;
