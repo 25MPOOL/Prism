@@ -129,3 +129,52 @@ export async function refreshGitHubAccessToken(
     return null;
   }
 }
+
+/**
+ * GitHubのOAuthトークンを無効化する関数。
+ * ログアウト処理の一部として、GitHub側の連携も完全に解除します。
+ * @param accessToken 無効化したいアクセストークン
+ * @param clientId GitHub AppのクライアントID
+ * @param clientSecret GitHub Appのクライアントシークレット
+ * @returns 成功した場合はtrue、失敗した場合はfalse
+ */
+export async function revokeGitHubToken(
+  accessToken: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<boolean> {
+  try {
+    // GitHubの Revoke an application authorization APIエンドポイントを呼び出し
+    const response = await fetch(
+      `https://api.github.com/applications/${clientId}/token`,
+      {
+        method: "DELETE",
+        headers: {
+          // Basic認証でClient IDとSecretを渡す
+          Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+          Accept: "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ access_token: accessToken }),
+      },
+    );
+
+    if (response.status === 204) {
+      console.log("Successfully revoked GitHub token");
+      return true;
+    } else {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error(
+        `Failed to revoke GitHub token. Status: ${response.status}`,
+        errorBody,
+      );
+      return false;
+    }
+  } catch (error) {
+    console.error(
+      "An unexpected error occurred during GitHub token revocation:",
+      error,
+    );
+    return false;
+  }
+}

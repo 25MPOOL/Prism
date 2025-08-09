@@ -5,6 +5,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "../../drizzle/schema";
 import { ConversationService } from "../services/conversationsService";
 import type { AppEnv } from "../types/definitions";
+import { revokeGitHubToken } from "../services/github/auth";
 
 const conversations = new Hono<{
   Bindings: AppEnv;
@@ -76,6 +77,8 @@ conversations.get("/sessions/:sessionId/messages", async (c) => {
 
 conversations.post("/auth/logout", async (c) => {
   const userId = c.get("userId");
+  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
+  const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
 
   // Cookie削除
   setCookie(c, "prism_uid", "", {
@@ -94,11 +97,32 @@ conversations.post("/auth/logout", async (c) => {
     maxAge: 0,
   });
 
-  // DBからユーザーデータ削除（cascadeで関連テーブルも削除）
+  // DBからユーザーデータ削除する前に、GitHubの連携を解除する
   if (userId) {
     const db = c.get("db");
     if (db) {
       try {
+        // ユーザーのGitHubトークンを取得
+        const tokenRecord = await db
+          .select()
+          .from(schema.githubTokens)
+          .where(eq(schema.githubTokens.userId, userId))
+          .get();
+
+        if (
+          tokenRecord?.accessToken &&
+          GITHUB_CLIENT_ID &&
+          GITHUB_CLIENT_SECRET
+        ) {
+          // GitHubトークンを無効化
+          await revokeGitHubToken(
+            tokenRecord.accessToken,
+            GITHUB_CLIENT_ID,
+            GITHUB_CLIENT_SECRET,
+          );
+        }
+
+        // DBからユーザーデータ削除（cascadeで関連テーブルも削除）
         await db.delete(schema.users).where(eq(schema.users.id, userId));
         console.log(`User ${userId} and all related data deleted`);
       } catch (error) {
