@@ -411,6 +411,90 @@ githubRouter.post("/issues", async (c) => {
   }
 });
 
+// 一括Issue作成: POST /github/issues/bulk
+// Body: { userId, owner, repo, issues: GeneratedIssue[] }
+githubRouter.post("/issues/bulk", async (c) => {
+  const db = c.get("db");
+  if (!db) {
+    return c.text(
+      "Database not initialized. Check your D1 binding in wrangler.jsonc or .env.",
+      500,
+    );
+  }
+
+  type CreateBulkIssuesBody = {
+    userId?: string;
+    owner?: string;
+    repo?: string;
+    issues?: { title: string; description: string }[];
+  };
+
+  let payload: CreateBulkIssuesBody;
+  try {
+    payload = (await c.req.json()) as CreateBulkIssuesBody;
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const { userId, owner, repo, issues } = payload;
+  if (!userId || !owner || !repo || !issues || issues.length === 0) {
+    return c.json(
+      { error: "userId, owner, repo, and issues are required" },
+      400,
+    );
+  }
+
+  try {
+    const createdIssues: {
+      id: number;
+      number: number;
+      title: string;
+      url: string;
+      html_url: string;
+      state: string;
+    }[] = [];
+
+    // 各Issueを順次作成
+    for (const issue of issues) {
+      const created = await callGitHubApi<GitHubCreatedIssue>(
+        db,
+        userId,
+        c.env,
+        `/repos/${owner}/${repo}/issues`,
+        "POST",
+        {
+          title: issue.title,
+          body: issue.description,
+        },
+      );
+
+      createdIssues.push({
+        id: created.id,
+        number: created.number,
+        title: created.title,
+        url: created.url,
+        html_url: created.html_url,
+        state: created.state,
+      });
+    }
+
+    return c.json({
+      success: true,
+      issues: createdIssues,
+      total: createdIssues.length,
+    });
+  } catch (error) {
+    console.error("Failed to create issues:", error);
+    return c.json(
+      {
+        error: "Failed to create issues",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
+  }
+});
+
 // リポジトリ作成: POST /github/repos
 // Body: CreateRepositoryInput
 githubRouter.post("/repos", async (c) => {
