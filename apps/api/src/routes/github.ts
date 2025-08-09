@@ -26,6 +26,18 @@ githubRouter.get("/oauth", async (c) => {
   const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
   const GITHUB_REDIRECT_URI = c.env.GITHUB_REDIRECT_URI;
 
+  // 拡張機能から渡されたリダイレクト先URLを取得しCookieに保存（10分）
+  const extRedirect = c.req.query("extRedirect");
+  if (extRedirect) {
+    setCookie(c, "ext_redirect", extRedirect, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Lax",
+      path: "/",
+      maxAge: 600,
+    });
+  }
+
   // CSRF攻撃を防ぐための一意なstate文字列を生成
   const state = crypto.randomUUID();
 
@@ -63,13 +75,13 @@ githubRouter.get("/callback", async (c) => {
     return c.text("Invalid state parameter. Possible CSRF attack.", 400);
   }
   // 使い捨て: Cookie削除
-  setCookie(c, "github_oauth_state", "", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "Lax",
-    path: "/",
-    maxAge: 0,
-  });
+  // setCookie(c, "github_oauth_state", "", {
+  //   httpOnly: true,
+  //   secure: true,
+  //   sameSite: "Lax",
+  //   path: "/",
+  //   maxAge: 0,
+  // });
 
   // 新規追加: トークン取得とリフレッシュのテストエンドポイント
   githubRouter.get("/test-token-refresh", async (c) => {
@@ -151,35 +163,91 @@ githubRouter.get("/callback", async (c) => {
     console.log("Authentication successful for user:", user.githubUsername);
     console.log("Access Token saved/updated for userId:", user.id);
 
-    // 認証成功のHTMLレスポンス (テスト用)
-    return c.html(`
-      <html lang="ja">
-        <head>
-          <title>認証成功</title>
-          <script src="https://cdn.tailwindcss.com"></script>
-          <style>
-            body { font-family: 'Inter', sans-serif; }
-          </style>
-        </head>
-        <body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
-          <div class="bg-gray-800 rounded-lg shadow-lg p-8 max-w-md w-full text-center rounded-xl">
-            <h1 class="text-3xl font-bold mb-4 text-green-400">認証成功！</h1>
-            <p class="text-lg mb-6 text-gray-300">GitHubアカウントとの連携が完了し、トークンが保存されました。</p>
-            <div class="bg-gray-700 p-4 rounded-md text-left break-all text-sm mb-4">
-              <h2 class="font-semibold mb-2 text-gray-400">認証済みユーザー:</h2>
-              <p><strong>Prism User ID:</strong> ${user.id}</p>
-              <p><strong>GitHub Username:</strong> ${user.githubUsername}</p>
-              <p><strong>GitHub ID:</strong> ${user.githubId}</p>
-            </div>
-            <a href="/" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300 transform hover:scale-105 inline-block">
-              トップに戻る
-            </a>
-          </div>
-        </body>
-      </html>
-    `);
+    // 拡張リダイレクト先が保存されていれば、そのURLへ成功フラグを付けてリダイレクト
+    const extRedirect = getCookie(c, "ext_redirect");
+    if (extRedirect) {
+      // Cookieを削除
+      setCookie(c, "ext_redirect", "", { maxAge: 0, path: "/" });
+      return c.redirect(`${extRedirect}#success=1`);
+    }
+
+    // 拡張側からの要求でなければ、簡易成功ページを返す
+    return c.html("<h1>Authentication Successful</h1>");
   } catch (error) {
     console.error("GitHub OAuth callback error:", error);
+    return c.json(
+      {
+        error: "Authentication failed",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
+  }
+});
+
+// Chrome拡張（chromiumapp.org）向け: 拡張が受け取ったcodeをAPIに渡してトークン交換するエンドポイント
+// 拡張側で chrome.identity.launchWebAuthFlow により https://<EXT_ID>.chromiumapp.org/ にリダイレクトを受け、
+// そのURLに含まれる ?code=...&state=... をここにPOSTして処理します。
+githubRouter.post("/exchange", async (c) => {
+  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
+  const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
+
+  let body: { code?: string; state?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const code = body.code;
+  // state は将来的に検証する（現在は拡張フローの都合でサーバー側保持がないため任意）
+
+  if (!code) {
+    return c.json({ error: "code is required" }, 400);
+  }
+
+  // DBインスタンス取得
+  const db = c.get("db");
+  if (!db) {
+    return c.text(
+      "Database not initialized. Check your D1 binding in wrangler.jsonc or .env.",
+      500,
+    );
+  }
+
+  try {
+    // 1. トークン交換
+    const tokens = await exchangeCodeForTokens(
+      code,
+      GITHUB_CLIENT_ID,
+      GITHUB_CLIENT_SECRET,
+    );
+    if (!tokens || !tokens.access_token) {
+      return c.json({ error: "Failed to get access token from GitHub." }, 500);
+    }
+
+    // 2. GitHubユーザープロファイル取得
+    const userProfile = await getGitHubUserProfile(tokens.access_token);
+    if (!userProfile) {
+      return c.json({ error: "Failed to get GitHub user profile." }, 500);
+    }
+
+    // 3. Prism内部ユーザーUpsert
+    const user = await findOrCreateUser(db, userProfile.id, userProfile.login);
+
+    // 4. トークン保存
+    await saveGitHubTokens(db, user.id, tokens);
+
+    return c.json({
+      message: "Authentication successful",
+      user: {
+        id: user.id,
+        githubId: user.githubId,
+        githubUsername: user.githubUsername,
+      },
+    });
+  } catch (error) {
+    console.error("GitHub OAuth exchange error:", error);
     return c.json(
       {
         error: "Authentication failed",
