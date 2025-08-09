@@ -80,3 +80,16 @@ export interface GitHubRepository {
     pull?: boolean;
   };
 }
+
+/**
+ * Issue作成API (POST /repos/{owner}/{repo}/issues) の主要レスポンス
+ */
+export interface GitHubCreatedIssue {
+  id: number;
+  number: number;
+  title: string;
+  body: string | null;
+  html_url: string;
+  url: string;
+  state: "open" | "closed";
+}

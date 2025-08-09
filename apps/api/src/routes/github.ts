@@ -4,7 +4,7 @@ import {
   getGitHubUserProfile,
 } from "../services/github/auth"; // getGitHubUserProfileをインポート
 import { callGitHubApi } from "../services/github/apiClient";
-import type { GitHubRepository } from "../types/github";
+import type { GitHubRepository, GitHubCreatedIssue } from "../types/github";
 import {
   findOrCreateUser,
   saveGitHubTokens,
@@ -318,6 +318,74 @@ githubRouter.get("/repos", async (c) => {
     return c.json(
       {
         error: "Failed to fetch repositories",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
+  }
+});
+
+// Issue作成: POST /github/issues
+// Body: { userId, owner, repo, title, body?, labels? }
+githubRouter.post("/issues", async (c) => {
+  const db = c.get("db");
+  if (!db) {
+    return c.text(
+      "Database not initialized. Check your D1 binding in wrangler.jsonc or .env.",
+      500,
+    );
+  }
+
+  type CreateIssueBody = {
+    userId?: string;
+    owner?: string;
+    repo?: string;
+    title?: string;
+    body?: string;
+    labels?: string[];
+  };
+  let payload: CreateIssueBody;
+  try {
+    payload = (await c.req.json()) as CreateIssueBody;
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const { userId, owner, repo, title, body, labels } = payload;
+  if (!userId || !owner || !repo || !title) {
+    return c.json({ error: "userId, owner, repo, title are required" }, 400);
+  }
+
+  try {
+    const created = await callGitHubApi<GitHubCreatedIssue>(
+      db,
+      userId,
+      c.env,
+      `/repos/${owner}/${repo}/issues`,
+      "POST",
+      {
+        title,
+        body,
+        labels,
+      },
+    );
+
+    return c.json({
+      success: true,
+      issue: {
+        id: created.id,
+        number: created.number,
+        title: created.title,
+        url: created.url,
+        html_url: created.html_url,
+        state: created.state,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to create issue:", error);
+    return c.json(
+      {
+        error: "Failed to create issue",
         details: error instanceof Error ? error.message : String(error),
       },
       500,
