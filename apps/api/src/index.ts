@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { getCookie } from "hono/cookie";
+import { getCookie, setCookie } from "hono/cookie";
 import { drizzle } from "drizzle-orm/d1"; // DB実装を有効化
 import * as schema from "../drizzle/schema"; // DB実装を有効化
 import { eq } from "drizzle-orm";
@@ -84,6 +84,44 @@ app.get("/", (c) => {
       </body>
     </html>
   `);
+});
+
+// ログアウトでデータ削除
+app.post("/auth/logout", async (c) => {
+  const userId = c.get("userId");
+  // セッションCookie削除
+  setCookie(c, "prism_uid", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: 0,
+  });
+  // 念のため一時Cookieも削除（存在していれば）
+  setCookie(c, "ext_redirect", "", { path: "/", maxAge: 0 });
+  setCookie(c, "github_oauth_state", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: 0,
+  });
+
+  // DBからユーザーデータ削除（cascadeで関連テーブルも削除）
+  if (userId) {
+    const db = c.get("db");
+    if (db) {
+      try {
+        await db.delete(schema.users).where(eq(schema.users.id, userId));
+        console.log(`User ${userId} and all related data deleted`);
+      } catch (error) {
+        console.error("Failed to delete user data:", error);
+        // エラーでもCookie削除は成功として扱う
+      }
+    }
+  }
+
+  return c.json({ success: true });
 });
 
 // GitHub認証関連のルートを登録
