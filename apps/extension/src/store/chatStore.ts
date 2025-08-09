@@ -14,6 +14,7 @@ interface ChatState {
   sessionId: string | null;
   error: string | null;
   _manager: WebSocketManager<ServerMessage, ClientMessage> | null;
+  pendingQueue: string[];
   connect: () => void;
   disconnect: () => void;
   sendMessage: (content: string) => void;
@@ -52,6 +53,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sessionId: null,
   error: null,
   _manager: null,
+  pendingQueue: [],
 
   connect: () => {
     if (get()._manager) return;
@@ -65,6 +67,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
         switch (data.type) {
           case "session_created": {
             set({ sessionId: data.data.session.id });
+            const { _manager, pendingQueue } = get();
+            if (_manager && pendingQueue.length) {
+              for (const content of pendingQueue) {
+                _manager.send({
+                  type: "chat",
+                  data: { sessionId: data.data.session.id, message: content },
+                });
+              }
+              set({ pendingQueue: [] });
+            }
             break;
           }
           case "chat_response": {
@@ -113,9 +125,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   sendMessage: (content: string) => {
-    const { _manager, sessionId } = get();
+    const { _manager, sessionId, connect } = get();
+
+    if (!_manager) {
+      connect();
+    }
     if (!sessionId) {
-      console.error("No session ID.");
+      set((s) => ({
+        messages: [
+          ...s.messages,
+          { id: crypto.randomUUID(), role: "user", content },
+        ],
+        isLoading: true,
+        error: null,
+        pendingQueue: [...s.pendingQueue, content],
+      }));
       return;
     }
 
