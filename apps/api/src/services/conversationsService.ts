@@ -321,6 +321,16 @@ export class ConversationService {
     };
   }
 
+  // 他人のsessionIdを使った情報漏洩を防ぐ
+  public async getSessionOwner(sessionId: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({ userId: conversations.userId })
+      .from(conversations)
+      .where(eq(conversations.id, sessionId))
+      .limit(1);
+    return row?.userId ?? null;
+  }
+
   // セッション一覧取得
   async listSessionsByUser(
     userId: string,
@@ -377,6 +387,12 @@ export class ConversationService {
         updatedAt: new Date(c.updatedAt as unknown as number),
       };
     });
+  }
+
+  public async getSessionData(sessionId: string) {
+    const s = await this.getSession(sessionId); // 既存privateを利用
+    if (!s) throw new Error("Session not found");
+    return s; // { id, messages, phase }
   }
 
   // メッセージをDBに保存

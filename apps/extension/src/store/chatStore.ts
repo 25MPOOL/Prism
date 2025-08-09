@@ -19,6 +19,7 @@ interface ChatState {
   sendMessage: (content: string) => void;
   newChat: () => void;
   reset: () => void;
+  loadSession: (id: string) => Promise<void>;
 }
 
 type ServerMessage =
@@ -128,6 +129,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
 
     _manager?.send({ type: "chat", data: { sessionId, message: content } });
+  },
+
+  // 履歴から既存セッションをロードして再開
+  loadSession: async (id: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      const res = await fetch(
+        "https://prism-api.kaitomichigan22.workers.dev/sessions/" +
+          id +
+          "/messages",
+        { credentials: "include" },
+      );
+      const { data } = await res.json();
+      const msgs = (
+        data.messages as { id: string; role: "user" | "ai"; content: string }[]
+      ).map((m) => ({ id: m.id, role: m.role, content: m.content }));
+      set({ sessionId: id, messages: msgs, isLoading: false });
+    } catch (e) {
+      console.error(e);
+      set({ isLoading: false, error: "Failed to load session" });
+    }
   },
 
   newChat: () => {
