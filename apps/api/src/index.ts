@@ -35,7 +35,7 @@ const app = new Hono<AppContext>();
 app.use(
   "/*",
   cors({
-    origin: "chrome-extension://iehakmnooonopdcffjcibndgidphpanc", // Prism ExtensionのID
+    origin: ["chrome-extension://imjikfcieomhjalhflkgmkkafnenkpeo"],
     allowMethods: ["GET", "POST", "PUT", "DELETE"],
     allowHeaders: ["Content-Type"],
     credentials: true, // すべてのリクエストでCookie→userIdを載せる(c.get("userId")で参照可)

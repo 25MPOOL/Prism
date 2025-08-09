@@ -30,6 +30,7 @@
     "host_permissions": [
       "https://*/*"
     ],
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6SiIFD4cqy9xWh3/SRkMFTlDT7ylkhzcthdx25lXcr819Z0rfHcnyjky9/ZvwxPZAPCayQJ50OzFPqvwwlFBToZ/AL3OgKcwC1zSgDPQNUfkPtu7V3uhilwEvA3ER4Zx4KeoniRg77oh/PW7DwXGbdvjBXt6dZ7mrNuJUUolSVPbpYGUd5P9F4bVE688GtGF2WqA/euUOt9vpvyY9KfvDx5V2GYWGjUVNSiGAOtqHYbaskzRPR5iANCG/HDuI38cYDct/YqOgS4wNVAhxTvuNWfTViX7vBB+y8joE7oQYbEhqH8awIlCZZjmwXqcKjc0W/0UID7zgmL5tBYMtipSnwIDAQAB",
     "permissions": [
       "identity",
       "storage",
