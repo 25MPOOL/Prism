@@ -82,3 +82,50 @@ export async function getGitHubUserProfile(
     return null;
   }
 }
+
+/**
+ * GitHubのリフレッシュトークンを使って新しいアクセストークンを取得する関数。
+ * @param refreshToken ユーザーのリフレッシュトークン
+ * @param clientId GitHub AppのクライアントID
+ * @param clientSecret GitHub Appのクライアントシークレット
+ * @returns 新しいアクセストークンとリフレッシュトークンを含むオブジェクト、またはnull
+ */
+export async function refreshGitHubAccessToken(
+  refreshToken: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<GitHubTokenResponse | null> {
+  try {
+    const response = await fetch(
+      "https://github.com/login/oauth/access_token",
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+          client_secret: clientSecret,
+          grant_type: "refresh_token", // リフレッシュトークンフローの指定
+          refresh_token: refreshToken,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      console.error(
+        `Failed to refresh GitHub access token: ${response.status} ${response.statusText}`,
+      );
+      const errorData = await response.json();
+      console.error("Error details:", errorData);
+      return null;
+    }
+
+    const data: GitHubTokenResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error refreshing GitHub access token:", error);
+    return null;
+  }
+}
