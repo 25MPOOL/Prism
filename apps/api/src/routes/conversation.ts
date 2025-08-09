@@ -75,6 +75,32 @@ conversations.get("/sessions/:sessionId/messages", async (c) => {
   return c.json({ success: true, data: session });
 });
 
+conversations.get("/:sessionId/issues", async (c) => {
+  const userId = c.get("userId");
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
+  const { sessionId } = c.req.param();
+  const svc = new ConversationService(c.env.GEMINI_API_KEY ?? "", c.env.DB);
+
+  // 所有者チェック
+  const owner = await svc.getSessionOwner(sessionId);
+  if (owner !== userId) return c.json({ error: "Forbidden" }, 403);
+
+  try {
+    const issues = await svc.generateTasksFromSession(sessionId);
+    return c.json({ success: true, issues });
+  } catch (error) {
+    console.error("Failed to generate issues:", error);
+    return c.json(
+      {
+        error: "Failed to generate issues",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      500,
+    );
+  }
+});
+
 conversations.post("/auth/logout", async (c) => {
   const userId = c.get("userId");
   const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
