@@ -3,10 +3,17 @@ import {
   exchangeCodeForTokens,
   getGitHubUserProfile,
 } from "../services/github/auth"; // getGitHubUserProfileをインポート
-import { findOrCreateUser, saveGitHubTokens } from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
+import {
+  findOrCreateUser,
+  saveGitHubTokens,
+  getValidGitHubAccessToken,
+} from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
 import { callGitHubApi } from "../services/github/apiClient";
-import type { GitHubRepository, GitHubCreatedIssue } from "../types/github";
-
+import type {
+  GitHubRepository,
+  GitHubCreatedIssue,
+  CreateRepositoryInput,
+} from "../types/github";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type * as schema from "../../drizzle/schema";
 import type { AppEnv } from "../types/definitions"; // AppEnvをインポート
@@ -395,6 +402,78 @@ githubRouter.post("/issues", async (c) => {
     return c.json(
       {
         error: "Failed to create issue",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
+  }
+});
+
+// リポジトリ作成: POST /github/repos
+// Body: CreateRepositoryInput
+githubRouter.post("/repos", async (c) => {
+  const db = c.get("db");
+  if (!db) {
+    return c.text(
+      "Database not initialized. Check your D1 binding in wrangler.jsonc or .env.",
+      500,
+    );
+  }
+
+  let payload: CreateRepositoryInput;
+  try {
+    payload = (await c.req.json()) as CreateRepositoryInput;
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const {
+    userId,
+    name,
+    description,
+    private: isPrivate,
+    auto_init,
+    gitignore_template,
+    license_template,
+    homepage,
+    ownerType = "user",
+    owner,
+  } = payload;
+
+  if (!userId || !name) {
+    return c.json({ error: "userId and name are required" }, 400);
+  }
+  if (ownerType === "organization" && !owner) {
+    return c.json({ error: "owner (organization login) is required" }, 400);
+  }
+
+  try {
+    const path =
+      ownerType === "organization" ? `/orgs/${owner}/repos` : "/user/repos";
+
+    const createdRepo = await callGitHubApi<GitHubRepository>(
+      db,
+      userId,
+      c.env,
+      path,
+      "POST",
+      {
+        name,
+        description,
+        private: isPrivate ?? true,
+        auto_init: auto_init ?? true,
+        gitignore_template,
+        license_template,
+        homepage,
+      },
+    );
+
+    return c.json({ success: true, repository: createdRepo });
+  } catch (error) {
+    console.error("Failed to create repository:", error);
+    return c.json(
+      {
+        error: "Failed to create repository",
         details: error instanceof Error ? error.message : String(error),
       },
       500,

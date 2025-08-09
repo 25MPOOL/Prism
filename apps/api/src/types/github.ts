@@ -84,6 +84,24 @@ export interface GitHubRepository {
 }
 
 /**
+ * リポジトリ作成時に受け付けたい最小限の入力
+ */
+export interface CreateRepositoryInput {
+  userId: string;
+  name: string;
+  description?: string | null;
+  private?: boolean;
+  auto_init?: boolean;
+  gitignore_template?: string;
+  license_template?: string;
+  homepage?: string;
+  // 所有者種別: 認証ユーザー配下なら 'user'、オーガナイゼーション配下なら 'organization'
+  ownerType?: "user" | "organization";
+  // ownerTypeがorganizationのとき必須（orgのlogin）
+  owner?: string;
+}
+
+/**
  * Issue作成API (POST /repos/{owner}/{repo}/issues) の主要レスポンス
  */
 export interface GitHubCreatedIssue {
