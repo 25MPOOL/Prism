@@ -239,6 +239,7 @@ githubRouter.post("/exchange", async (c) => {
     await saveGitHubTokens(db, user.id, tokens);
 
     return c.json({
+      success: true,
       message: "Authentication successful",
       user: {
         id: user.id,
