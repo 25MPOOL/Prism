@@ -3,11 +3,7 @@ import {
   exchangeCodeForTokens,
   getGitHubUserProfile,
 } from "../services/github/auth"; // getGitHubUserProfileをインポート
-import {
-  findOrCreateUser,
-  saveGitHubTokens,
-  getValidGitHubAccessToken,
-} from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
+import { findOrCreateUser, saveGitHubTokens } from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type * as schema from "../../drizzle/schema";
 import type { AppEnv } from "../types/definitions"; // AppEnvをインポート
@@ -150,48 +146,6 @@ githubRouter.get("/callback", async (c) => {
       },
       500,
     );
-  }
-});
-
-// 新規追加: トークン取得とリフレッシュのテストエンドポイント
-githubRouter.get("/test-token-refresh", async (c) => {
-  const db = c.get("db");
-  if (!db) return c.text("Database not initialized.", 500);
-
-  const userId = c.req.query("userId"); // テストしたいユーザーのPrism User IDをクエリパラメータで渡す
-  if (!userId) return c.text("User ID is required for testing.", 400);
-
-  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
-  const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
-
-  try {
-    const validAccessToken = await getValidGitHubAccessToken(
-      db,
-      userId,
-      GITHUB_CLIENT_ID,
-      GITHUB_CLIENT_SECRET,
-    );
-
-    if (validAccessToken) {
-      // 取得したトークンを使ってGitHub APIを呼び出してみる (例: /user API)
-      const userProfile = await getGitHubUserProfile(validAccessToken);
-      return c.json({
-        message: "Successfully got valid access token and user profile.",
-        accessToken: validAccessToken,
-        userProfile: userProfile,
-      });
-    } else {
-      return c.json(
-        {
-          message:
-            "Failed to get a valid access token. User may need to re-authenticate.",
-        },
-        401,
-      );
-    }
-  } catch (error) {
-    console.error("Test token refresh endpoint error:", error);
-    return c.json({ error: "Internal server error during token test." }, 500);
   }
 });
 
