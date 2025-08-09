@@ -1,4 +1,5 @@
 import { memo, useCallback } from "react";
+import { IconSignOut } from "./IconSignOut";
 
 interface DropDownMenuProps {
   isOpen: boolean;
@@ -18,9 +19,24 @@ export const DropDownMenu = memo((props: DropDownMenuProps) => {
   return (
     <>
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-48 rounded-md bg-white shadow-lg">
-          <ul className="divide-y divide-gray-100">
-            <li className="px-4 py-2">Logout</li>
+        <div className="absolute right-0 mt-2 w-48 animate-drop-down-menu rounded-xl bg-[#2a313c] shadow-drop-down">
+          <ul className="list-none py-2">
+            <li className="mx-2 rounded-md border-transparent duration-75 hover:bg-[#656c7626]">
+              <button
+                type="button"
+                onClick={_handleClose}
+                className="flex flex-row gap-2 px-2 py-1.5"
+              >
+                {/* アイコン */}
+                <div className="flex items-center justify-center">
+                  <IconSignOut />
+                </div>
+                {/* テキスト */}
+                <div className="flex w-full items-center justify-start">
+                  <p className="text-[#d1d7e0]">Sign out</p>
+                </div>
+              </button>
+            </li>
           </ul>
         </div>
       )}
