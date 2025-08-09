@@ -1,62 +1,66 @@
 // 拡張機能アイコンクリックでサイドパネルを開く設定
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
-// インストール時やタブ切り替え時にサイドパネルを有効にする
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.sidePanel.setOptions({ enabled: true });
-});
-chrome.tabs.onActivated.addListener(() => {
-  chrome.sidePanel.setOptions({ enabled: true });
-});
-
 // `START_GITHUB_OAUTH` メッセージを受けて認証フローを開始する
 chrome.runtime.onMessage.addListener(async (message) => {
-  if (message.type !== "START_GITHUB_OAUTH") {
-    return;
-  }
+  if (message.type !== "START_GITHUB_OAUTH") return;
 
   try {
-    const baseUrl = "https://prism-api.kaitomichigan22.workers.dev/";
+    const GITHUB_CLIENT_ID = "Iv23liYYgijGAuZfFd51"; // 実際の値に置き換えてください
 
-    // 認証完了後にHonoバックエンドがリダイレクトする先のURL（拡張機能内の仮想URL）
-    const extensionRedirectUrl = chrome.identity.getRedirectURL();
-
-    // Honoバックエンドに、認証後の戻り先として拡張機能のURLを伝える
-    const initialAuthUrl = `${baseUrl}github/oauth?extRedirect=${encodeURIComponent(
-      extensionRedirectUrl,
-    )}`;
+    // GitHubの認証ページURLを直接組み立てる
+    const authUrl = new URL("https://github.com/login/oauth/authorize");
+    authUrl.searchParams.append("client_id", GITHUB_CLIENT_ID);
+    authUrl.searchParams.append(
+      "redirect_uri",
+      chrome.identity.getRedirectURL(),
+    );
+    authUrl.searchParams.append("scope", "repo,read:org");
 
     // 認証ウィンドウを開き、最終的なリダイレクトURLを待つ
     const finalRedirectUrl = await chrome.identity.launchWebAuthFlow({
-      url: initialAuthUrl,
+      url: authUrl.href,
       interactive: true,
     });
 
-    // 最終URLに成功フラグが含まれているかチェック
-    const isSuccess = finalRedirectUrl?.includes("#success=1");
-
-    if (isSuccess) {
-      console.log("OAuth flow completed successfully.");
-      await chrome.storage.local.set({ isLoggedIn: true });
-
-      // 現在アクティブなタブでサイドパネルを再度開く
-      const [activeTab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-      if (activeTab?.id) {
-        await chrome.sidePanel.open({ tabId: activeTab.id });
-      }
-    } else {
-      console.warn(
-        "OAuth flow did not complete successfully.",
-        finalRedirectUrl,
-      );
+    if (!finalRedirectUrl) {
+      return { ok: false, error: "User cancelled." };
     }
-    // 応答を返す
-    return { ok: isSuccess };
+
+    // URLから認証コード`code`を抜き出す
+    const code = new URL(finalRedirectUrl).searchParams.get("code");
+    if (!code) {
+      throw new Error("Could not find 'code' in redirect URL.");
+    }
+
+    // Honoバックエンドの /exchange エンドポイントにcodeをPOSTする
+    const backendUrl =
+      "https://prism-api.kaitomichigan22.workers.dev/github/exchange";
+    const response = await fetch(backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Backend exchange failed.");
+    }
+
+    console.log("Backend exchange successful. Login complete.");
+    await chrome.storage.local.set({ isLoggedIn: true });
+
+    // 現在アクティブなタブでサイドパネルを再度開く
+    const [activeTab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (activeTab?.id) {
+      await chrome.sidePanel.open({ tabId: activeTab.id });
+    }
+    return { ok: true };
   } catch (error) {
-    console.error("launchWebAuthFlow failed:", error);
+    console.error("OAuth flow failed:", error);
     return {
       ok: false,
       error: error instanceof Error ? error.message : String(error),
