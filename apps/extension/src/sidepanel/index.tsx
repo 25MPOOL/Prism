@@ -11,7 +11,7 @@ import { client } from "@/utils/client";
 
 function SidePanel() {
   const { start, isLoggedIn } = useGithubOAuth();
-  const { messages, isLoading } = useChat({ autoConnect: false });
+  const { messages } = useChat({ autoConnect: false });
   const [displayName, setDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
