@@ -6,7 +6,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
   if (message.type !== "START_GITHUB_OAUTH") return;
 
   try {
-    const GITHUB_CLIENT_ID = "Iv23liYYgijGAuZfFd51"; // 実際の値に置き換えてください
+    const GITHUB_CLIENT_ID = "Iv23liYYgijGAuZfFd51";
 
     // GitHubの認証ページURLを直接組み立てる
     const authUrl = new URL("https://github.com/login/oauth/authorize");
@@ -40,6 +40,7 @@ chrome.runtime.onMessage.addListener(async (message) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code }),
+      credentials: "include",
     });
 
     const data = await response.json();
@@ -49,15 +50,6 @@ chrome.runtime.onMessage.addListener(async (message) => {
 
     console.log("Backend exchange successful. Login complete.");
     await chrome.storage.local.set({ isLoggedIn: true });
-
-    // 現在アクティブなタブでサイドパネルを再度開く
-    const [activeTab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    if (activeTab?.id) {
-      await chrome.sidePanel.open({ tabId: activeTab.id });
-    }
     return { ok: true };
   } catch (error) {
     console.error("OAuth flow failed:", error);
