@@ -53,6 +53,21 @@ conversations.get("/sessions", async (c) => {
   return c.json({ success: true, data: { sessions } });
 });
 
+conversations.get("/sessions/:sessionId/messages", async (c) => {
+  const userId = c.get("userId");
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
+  const { sessionId } = c.req.param();
+  const svc = new ConversationService(c.env.GEMINI_API_KEY ?? "", c.env.DB);
+
+  // 所有者チェック
+  const owner = await svc.getSessionOwner(sessionId);
+  if (owner !== userId) return c.json({ error: "Forbidden" }, 403);
+
+  const session = await svc.getSessionData(sessionId);
+  return c.json({ success: true, data: session });
+});
+
 // ヘルスチェック用
 conversations.get("/health", async (c) => {
   return c.json({ status: "ok", service: "conversations" });
