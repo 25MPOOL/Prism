@@ -3,7 +3,11 @@ import {
   exchangeCodeForTokens,
   getGitHubUserProfile,
 } from "../services/github/auth"; // getGitHubUserProfileをインポート
-import { findOrCreateUser, saveGitHubTokens } from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
+import {
+  findOrCreateUser,
+  saveGitHubTokens,
+  getValidGitHubAccessToken,
+} from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
 import { callGitHubApi } from "../services/github/apiClient";
 import type { GitHubRepository, GitHubCreatedIssue } from "../types/github";
 
