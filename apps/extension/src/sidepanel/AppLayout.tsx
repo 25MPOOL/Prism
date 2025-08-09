@@ -1,3 +1,6 @@
+import { IconClock } from "@/components/ui/IconClock";
+import { IconPlus } from "@/components/ui/IconPlus";
+import { IconShare } from "@/components/ui/IconShare";
 interface AppLayoutProps {
   children: React.ReactNode;
 }
@@ -15,21 +18,21 @@ export const AppLayout = (props: AppLayoutProps) => {
             className="h-8 w-8 rounded-md border border-[#3d444d]"
             type="button"
           >
-            A
+            <IconPlus />
           </button>
           {/* TODO: チャット履歴を開くボタン */}
           <button
             className="h-8 w-8 rounded-md border border-[#3d444d]"
             type="button"
           >
-            A
+            <IconClock />
           </button>
           {/* TODO: 3点リーダー */}
           <button
             className="h-8 w-8 rounded-md border border-[#3d444d]"
             type="button"
           >
-            A
+            <IconShare />
           </button>
           {/* TODO: 閉じるボタンまたは、ユーザーアイコン ログアウトとか */}
           <button
