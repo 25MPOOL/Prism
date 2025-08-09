@@ -1,9 +1,11 @@
+import { DropDownMenu } from "@/components/ui/DropDownMenu";
 import { IconClock } from "@/components/ui/IconClock";
 import { IconPlus } from "@/components/ui/IconPlus";
 import { IconShare } from "@/components/ui/IconShare";
 import { useGetProfile } from "@/hooks/api/getProfile";
 import { userKeys } from "@/hooks/api/queryKeys";
 import { useQuery } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -11,12 +13,21 @@ interface AppLayoutProps {
 
 export const AppLayout = (props: AppLayoutProps) => {
   const { children } = props;
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const { fetchProfile } = useGetProfile();
   const { data: profile } = useQuery({
     queryKey: userKeys.profile(),
     queryFn: () => fetchProfile(),
   });
+
+  /**
+  /**
+   * ドロップダウンメニューをトグルする
+   */
+  const handleDropdownToggle = useCallback(() => {
+    setIsDropdownOpen((prev) => !prev);
+  }, []);
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
@@ -42,13 +53,18 @@ export const AppLayout = (props: AppLayoutProps) => {
             <IconShare />
           </button>
           <button
-            className="h-8 w-8 rounded-full border border-[#3d444d]"
+            className="relative h-8 w-8 rounded-full border border-[#3d444d]"
             type="button"
+            onClick={handleDropdownToggle}
           >
             <img
               src={profile?.user.avatarUrl}
               alt={profile?.user.name}
               className="h-full w-full rounded-full"
+            />
+            <DropDownMenu
+              isOpen={isDropdownOpen}
+              onClose={handleDropdownToggle}
             />
           </button>
         </div>
