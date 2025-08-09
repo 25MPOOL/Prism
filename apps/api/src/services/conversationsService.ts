@@ -1,11 +1,12 @@
 import type { D1Database } from "@cloudflare/workers-types";
-import { eq } from "drizzle-orm";
+import { eq, and, desc, gte, inArray, asc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { conversations, messages } from "../../drizzle/schema";
+import { conversations, messages, } from "../../drizzle/schema";
 import type {
   ConversationMessage,
   ConversationSession,
   GeneratedIssue,
+  ConversationSummary,
 } from "../types/definitions";
 import { GeminiAPIClient } from "./google/gemini-api";
 import {
@@ -26,7 +27,7 @@ export class ConversationService {
   // セッション作成メソッド
   async createSession(
     // TODO: ユーザーIDをDBから取得する
-    userId: string = "44405031-f2b1-4439-8890-3d289b12ff2f",
+    userId: string = "",
   ): Promise<ConversationSession> {
     const sessionId = crypto.randomUUID();
     const now = new Date();
@@ -320,6 +321,63 @@ export class ConversationService {
     };
   }
 
+  async listSessionsByUser(
+    userId: string,
+    opts?: { days?: number; limit?: number },
+  ): Promise<ConversationSummary[]> {
+    const days = opts?.days ?? 7;
+    const limit = opts?.limit ?? 50;
+    const threshold = new Date(Date.now() - days * 86_400_000); // 24 x 60 x 60 x 1000 = 86_400_000
+
+    // 対象ユーザーの会話（最近順）
+    const convs = await this.db
+      .select({
+        id: conversations.id,
+        title: conversations.title,
+        updatedAt: conversations.updatedAt,
+      })
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.userId, userId),
+          gte(conversations.updatedAt, threshold),
+        ),
+      )
+      .orderBy(desc(conversations.updatedAt))
+      .limit(limit);
+
+    if (convs.length === 0) return [];
+
+    // 先頭メッセージをまとめて取得（各会話のタイトル候補に使う）
+    const ids = convs.map((c) => c.id);
+    const firstMsgs = await this.db
+      .select({
+        conversationId: messages.conversationId,
+        content: messages.content,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(inArray(messages.conversationId, ids))
+      .orderBy(messages.conversationId, asc(messages.createdAt));
+
+    const firstByConv = new Map<string, string>();
+    for (const m of firstMsgs) {
+      if (!firstByConv.has(m.conversationId)) {
+        firstByConv.set(m.conversationId, m.content);
+      }
+    }
+
+    return convs.map((c) => {
+      const first = firstByConv.get(c.id) ?? c.title ?? "";
+      const title = first.slice(0, 10); // 最初の会話10文字をタイトルに指定
+      return {
+        id: c.id,
+        title,
+        updatedAt: new Date(c.updatedAt as unknown as number),
+      };
+    });
+  }
+
   // メッセージをDBに保存
   private async saveMessage(
     sessionId: string,
@@ -340,6 +398,26 @@ export class ConversationService {
       content,
       createdAt: now,
     });
+    if (role === "user") {
+      // このセッションでの「ユーザー」メッセージ件数を数える
+      const [{ cnt }] = await this.db
+        .select({ cnt: sql<number>`count(*)` })
+        .from(messages)
+        .where(
+          and(
+            eq(messages.conversationId, sessionId),
+            eq(messages.role, "user"),
+          ),
+        );
+
+      // 初回のユーザーメッセージならタイトルを10文字で更新
+      if (cnt === 1) {
+        await this.db
+          .update(conversations)
+          .set({ title: content.slice(0, 10), updatedAt: now })
+          .where(eq(conversations.id, sessionId));
+      }
+    }
 
     console.log(`✅ DB: メッセージ保存完了 ${messageId}`); // デバッグログ追加
 

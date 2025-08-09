@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { getCookie } from "hono/cookie";
 import type {
   AppEnv,
   ChatMessageData,
@@ -14,6 +15,11 @@ websocket.get("/connect", async (c) => {
   // もし合言葉が無ければ処理が中段
   if (upgradeHeader !== "websocket") {
     return c.text("Expected Upgrade: websocket", 426);
+  }
+
+  const userId = getCookie(c, "prism_uid");
+  if (!userId) {
+    return c.text("Unauthorized", 401);
   }
 
   const apiKey = c.env?.GEMINI_API_KEY;
@@ -61,7 +67,12 @@ websocket.get("/connect", async (c) => {
         return;
       }
 
-      await handleWebSocketMessage(server, message, conversationService);
+      await handleWebSocketMessage(
+        server,
+        message,
+        conversationService,
+        userId,
+      );
     } catch (error) {
       console.error("WebSocket message error:", error);
       sendError(server, "Invalid message, format");
@@ -79,6 +90,7 @@ async function handleWebSocketMessage(
   webSocket: WebSocket,
   message: WebSocketMessage,
   conversationService: ConversationService,
+  userId: string,
 ) {
   switch (message.type) {
     case "chat": {
@@ -95,6 +107,7 @@ async function handleWebSocketMessage(
         webSocket,
         message.messageId,
         conversationService,
+        userId,
       );
       break;
     case "ping":
@@ -129,8 +142,9 @@ async function handleSessionCreate(
   webSocket: WebSocket,
   messageId: string | undefined,
   conversationService: ConversationService,
+  userId: string,
 ) {
-  const session = await conversationService.createSession();
+  const session = await conversationService.createSession(userId);
 
   const wsResponse: WebSocketResponse = {
     type: "session_created",
