@@ -102,6 +102,7 @@ githubRouter.get("/callback", async (c) => {
     // 4. 取得したユーザーIDとトークンをデータベースに保存/更新
     await saveGitHubTokens(db, user.id, tokens);
 
+    // GitHub OAuth成功時、user.idをprism_uidとして保存
     setCookie(c, "prism_uid", user.id, {
       httpOnly: true,
       secure: true,

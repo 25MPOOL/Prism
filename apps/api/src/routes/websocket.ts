@@ -17,7 +17,7 @@ websocket.get("/connect", async (c) => {
     return c.text("Expected Upgrade: websocket", 426);
   }
 
-  const userId = getCookie(c, "prism_uid");
+  const userId = getCookie(c, "prism_uid"); // 接続時、prism_uid取得
   if (!userId) {
     return c.text("Unauthorized", 401);
   }

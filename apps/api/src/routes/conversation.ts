@@ -43,8 +43,9 @@ conversations.post("/chat", async (c) => {
   }
 });
 
+// チャット履歴一覧表示
 conversations.get("/sessions", async (c) => {
-  const userId = c.get("userId");
+  const userId = c.get("userId"); // Cookieでユーザー識別
   if (!userId) return c.json({ error: "Unauthorized" }, 401);
 
   const svc = new ConversationService(c.env.GEMINI_API_KEY ?? "", c.env.DB);

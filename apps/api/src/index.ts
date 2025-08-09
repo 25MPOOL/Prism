@@ -38,7 +38,7 @@ app.use(
     origin: "chrome-extension://iehakmnooonopdcffjcibndgidphpanc", // Prism ExtensionのID
     allowMethods: ["GET", "POST", "PUT", "DELETE"],
     allowHeaders: ["Content-Type"],
-    credentials: true,
+    credentials: true, // すべてのリクエストでCookie→userIdを載せる(c.get("userId")で参照可)
   }),
 );
 

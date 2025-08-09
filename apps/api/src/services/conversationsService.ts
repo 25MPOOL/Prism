@@ -1,7 +1,7 @@
 import type { D1Database } from "@cloudflare/workers-types";
 import { eq, and, desc, gte, inArray, asc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { conversations, messages, } from "../../drizzle/schema";
+import { conversations, messages } from "../../drizzle/schema";
 import type {
   ConversationMessage,
   ConversationSession,
@@ -321,6 +321,7 @@ export class ConversationService {
     };
   }
 
+  // セッション一覧取得
   async listSessionsByUser(
     userId: string,
     opts?: { days?: number; limit?: number },
