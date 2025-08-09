@@ -57,3 +57,41 @@ export interface GitHubUserProfile {
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * GitHubのリポジトリ（/user/repos など）レスポンスの主要フィールド。
+ * 参照: https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-repositories-for-the-authenticated-user
+ */
+export interface GitHubRepository {
+  id: number;
+  name: string;
+  full_name: string;
+  private: boolean;
+  owner: {
+    login: string;
+    id: number;
+    avatar_url: string;
+    type: "User" | "Organization" | string;
+  };
+  html_url: string;
+  description: string | null;
+  default_branch: string;
+  permissions?: {
+    admin?: boolean;
+    push?: boolean;
+    pull?: boolean;
+  };
+}
+
+/**
+ * Issue作成API (POST /repos/{owner}/{repo}/issues) の主要レスポンス
+ */
+export interface GitHubCreatedIssue {
+  id: number;
+  number: number;
+  title: string;
+  body: string | null;
+  html_url: string;
+  url: string;
+  state: "open" | "closed";
+}

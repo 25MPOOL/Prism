@@ -4,6 +4,9 @@ import {
   getGitHubUserProfile,
 } from "../services/github/auth"; // getGitHubUserProfileをインポート
 import { findOrCreateUser, saveGitHubTokens } from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
+import { callGitHubApi } from "../services/github/apiClient";
+import type { GitHubRepository, GitHubCreatedIssue } from "../types/github";
+
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type * as schema from "../../drizzle/schema";
 import type { AppEnv } from "../types/definitions"; // AppEnvをインポート
@@ -225,6 +228,173 @@ githubRouter.post("/exchange", async (c) => {
     return c.json(
       {
         error: "Authentication failed",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
+  }
+});
+
+// 新規追加: トークン取得とリフレッシュのテストエンドポイント (ネストを修正)
+githubRouter.get("/test-token-refresh", async (c) => {
+  const db = c.get("db");
+  if (!db) return c.text("Database not initialized.", 500);
+
+  const userId = c.req.query("userId"); // テストしたいユーザーのPrism User IDをクエリパラメータで渡す
+  if (!userId) return c.text("User ID is required for testing.", 400);
+
+  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
+  const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
+
+  try {
+    const validAccessToken = await getValidGitHubAccessToken(
+      db,
+      userId,
+      GITHUB_CLIENT_ID,
+      GITHUB_CLIENT_SECRET,
+    );
+
+    if (validAccessToken) {
+      // 取得したトークンを使ってGitHub APIを呼び出してみる (例: /user API)
+      const userProfile = await getGitHubUserProfile(validAccessToken);
+      return c.json({
+        message: "Successfully got valid access token and user profile.",
+        accessToken: validAccessToken,
+        userProfile: userProfile,
+      });
+    } else {
+      return c.json(
+        {
+          message:
+            "Failed to get a valid access token. User may need to re-authenticate.",
+        },
+        401,
+      );
+    }
+  } catch (error) {
+    console.error("Test token refresh endpoint error:", error);
+    return c.json({ error: "Internal server error during token test." }, 500);
+  }
+});
+
+// 認証済みユーザーのアクセス可能なリポジトリ一覧を返すエンドポイント
+// GET /github/repos?userId=PRISM_USER_ID
+githubRouter.get("/repos", async (c) => {
+  const db = c.get("db");
+  if (!db) {
+    return c.text(
+      "Database not initialized. Check your D1 binding in wrangler.jsonc or .env.",
+      500,
+    );
+  }
+
+  const userId = c.req.query("userId");
+  if (!userId) {
+    return c.json({ error: "userId is required" }, 400);
+  }
+
+  try {
+    // GitHub API: GET /user/repos （必要に応じてパラメータ調整）
+    const repos = await callGitHubApi<GitHubRepository[]>(
+      db,
+      userId,
+      c.env,
+      "/user/repos?per_page=100&sort=updated",
+      "GET",
+    );
+
+    // フロントエンドで使いやすい最低限の情報に絞って返す
+    const simplified = repos.map((r) => ({
+      id: r.id,
+      name: r.name,
+      full_name: r.full_name,
+      private: r.private,
+      owner: {
+        login: r.owner?.login,
+        id: r.owner?.id,
+        avatar_url: r.owner?.avatar_url,
+        type: r.owner?.type,
+      },
+      html_url: r.html_url,
+      description: r.description,
+      default_branch: r.default_branch,
+      permissions: r.permissions ?? undefined,
+    }));
+
+    return c.json({ repositories: simplified });
+  } catch (error) {
+    console.error("Failed to fetch repositories:", error);
+    return c.json(
+      {
+        error: "Failed to fetch repositories",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
+  }
+});
+
+// Issue作成: POST /github/issues
+// Body: { userId, owner, repo, title, body?, labels? }
+githubRouter.post("/issues", async (c) => {
+  const db = c.get("db");
+  if (!db) {
+    return c.text(
+      "Database not initialized. Check your D1 binding in wrangler.jsonc or .env.",
+      500,
+    );
+  }
+
+  type CreateIssueBody = {
+    userId?: string;
+    owner?: string;
+    repo?: string;
+    title?: string;
+    body?: string;
+    labels?: string[];
+  };
+  let payload: CreateIssueBody;
+  try {
+    payload = (await c.req.json()) as CreateIssueBody;
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const { userId, owner, repo, title, body, labels } = payload;
+  if (!userId || !owner || !repo || !title) {
+    return c.json({ error: "userId, owner, repo, title are required" }, 400);
+  }
+
+  try {
+    const created = await callGitHubApi<GitHubCreatedIssue>(
+      db,
+      userId,
+      c.env,
+      `/repos/${owner}/${repo}/issues`,
+      "POST",
+      {
+        title,
+        body,
+        labels,
+      },
+    );
+
+    return c.json({
+      success: true,
+      issue: {
+        id: created.id,
+        number: created.number,
+        title: created.title,
+        url: created.url,
+        html_url: created.html_url,
+        state: created.state,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to create issue:", error);
+    return c.json(
+      {
+        error: "Failed to create issue",
         details: error instanceof Error ? error.message : String(error),
       },
       500,
