@@ -3,13 +3,10 @@ import {
   exchangeCodeForTokens,
   getGitHubUserProfile,
 } from "../services/github/auth"; // getGitHubUserProfileをインポート
+import { findOrCreateUser, saveGitHubTokens } from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
 import { callGitHubApi } from "../services/github/apiClient";
 import type { GitHubRepository, GitHubCreatedIssue } from "../types/github";
-import {
-  findOrCreateUser,
-  saveGitHubTokens,
-  getValidGitHubAccessToken,
-} from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
+
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type * as schema from "../../drizzle/schema";
 import type { AppEnv } from "../types/definitions"; // AppEnvをインポート
@@ -76,14 +73,15 @@ githubRouter.get("/callback", async (c) => {
   if (!returnedState || !storedState || returnedState !== storedState) {
     return c.text("Invalid state parameter. Possible CSRF attack.", 400);
   }
-  // 使い捨て: Cookie削除
-  // setCookie(c, "github_oauth_state", "", {
-  //   httpOnly: true,
-  //   secure: true,
-  //   sameSite: "Lax",
-  //   path: "/",
-  //   maxAge: 0,
-  // });
+
+  // github_oauth_state削除
+  setCookie(c, "github_oauth_state", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: 0,
+  });
 
   // 以下、トークン交換へ続行…
 
@@ -124,7 +122,7 @@ githubRouter.get("/callback", async (c) => {
     setCookie(c, "prism_uid", user.id, {
       httpOnly: true,
       secure: true,
-      sameSite: "Lax",
+      sameSite: "None", // Lax から Noneに変更（拡張→APIのクロスサイト送信を許可）
       path: "/",
       maxAge: 60 * 60 * 24 * 30,
     });
@@ -206,6 +204,15 @@ githubRouter.post("/exchange", async (c) => {
 
     // 4. トークン保存
     await saveGitHubTokens(db, user.id, tokens);
+
+    // 拡張機能側でもcookieを実装
+    setCookie(c, "prism_uid", user.id, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None", // Lax から Noneに変更（拡張→APIのクロスサイト送信を許可）
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
 
     return c.json({
       success: true,
