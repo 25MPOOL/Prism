@@ -228,6 +228,8 @@ githubRouter.post("/exchange", async (c) => {
         id: user.id,
         githubId: user.githubId,
         githubUsername: user.githubUsername,
+        name: userProfile.name || userProfile.login, // 表示名（nameがない場合はloginを使用）
+        avatarUrl: userProfile.avatar_url, // アバターURL
       },
     });
   } catch (error) {
@@ -474,6 +476,69 @@ githubRouter.post("/repos", async (c) => {
     return c.json(
       {
         error: "Failed to create repository",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
+  }
+});
+
+// ユーザープロファイル情報を取得するエンドポイント
+// GET /github/profile?userId=PRISM_USER_ID
+githubRouter.get("/profile", async (c) => {
+  const db = c.get("db");
+  if (!db) {
+    return c.text(
+      "Database not initialized. Check your D1 binding in wrangler.jsonc or .env.",
+      500,
+    );
+  }
+
+  const userId = c.req.query("userId");
+  if (!userId) {
+    return c.json({ error: "userId is required" }, 400);
+  }
+
+  try {
+    // 有効なアクセストークンを取得
+    const accessToken = await getValidGitHubAccessToken(
+      db,
+      userId,
+      c.env.GITHUB_CLIENT_ID,
+      c.env.GITHUB_CLIENT_SECRET,
+    );
+
+    if (!accessToken) {
+      return c.json(
+        {
+          error:
+            "No valid access token found. User may need to re-authenticate.",
+        },
+        401,
+      );
+    }
+
+    // GitHubユーザープロファイルを取得
+    const userProfile = await getGitHubUserProfile(accessToken);
+    if (!userProfile) {
+      return c.json({ error: "Failed to get GitHub user profile." }, 500);
+    }
+
+    return c.json({
+      success: true,
+      user: {
+        id: userId,
+        githubId: userProfile.id,
+        githubUsername: userProfile.login,
+        name: userProfile.name || userProfile.login, // 表示名（nameがない場合はloginを使用）
+        avatarUrl: userProfile.avatar_url, // アバターURL
+      },
+    });
+  } catch (error) {
+    console.error("Failed to get user profile:", error);
+    return c.json(
+      {
+        error: "Failed to get user profile",
         details: error instanceof Error ? error.message : String(error),
       },
       500,
