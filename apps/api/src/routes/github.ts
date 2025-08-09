@@ -3,6 +3,8 @@ import {
   exchangeCodeForTokens,
   getGitHubUserProfile,
 } from "../services/github/auth"; // getGitHubUserProfileをインポート
+import { callGitHubApi } from "../services/github/apiClient";
+import type { GitHubRepository } from "../types/github";
 import {
   findOrCreateUser,
   saveGitHubTokens,
@@ -82,48 +84,6 @@ githubRouter.get("/callback", async (c) => {
   //   path: "/",
   //   maxAge: 0,
   // });
-
-  // 新規追加: トークン取得とリフレッシュのテストエンドポイント
-  githubRouter.get("/test-token-refresh", async (c) => {
-    const db = c.get("db");
-    if (!db) return c.text("Database not initialized.", 500);
-
-    const userId = c.req.query("userId"); // テストしたいユーザーのPrism User IDをクエリパラメータで渡す
-    if (!userId) return c.text("User ID is required for testing.", 400);
-
-    const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
-    const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
-
-    try {
-      const validAccessToken = await getValidGitHubAccessToken(
-        db,
-        userId,
-        GITHUB_CLIENT_ID,
-        GITHUB_CLIENT_SECRET,
-      );
-
-      if (validAccessToken) {
-        // 取得したトークンを使ってGitHub APIを呼び出してみる (例: /user API)
-        const userProfile = await getGitHubUserProfile(validAccessToken);
-        return c.json({
-          message: "Successfully got valid access token and user profile.",
-          accessToken: validAccessToken,
-          userProfile: userProfile,
-        });
-      } else {
-        return c.json(
-          {
-            message:
-              "Failed to get a valid access token. User may need to re-authenticate.",
-          },
-          401,
-        );
-      }
-    } catch (error) {
-      console.error("Test token refresh endpoint error:", error);
-      return c.json({ error: "Internal server error during token test." }, 500);
-    }
-  });
 
   // 以下、トークン交換へ続行…
 
@@ -261,6 +221,103 @@ githubRouter.post("/exchange", async (c) => {
     return c.json(
       {
         error: "Authentication failed",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
+  }
+});
+
+// 新規追加: トークン取得とリフレッシュのテストエンドポイント (ネストを修正)
+githubRouter.get("/test-token-refresh", async (c) => {
+  const db = c.get("db");
+  if (!db) return c.text("Database not initialized.", 500);
+
+  const userId = c.req.query("userId"); // テストしたいユーザーのPrism User IDをクエリパラメータで渡す
+  if (!userId) return c.text("User ID is required for testing.", 400);
+
+  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
+  const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
+
+  try {
+    const validAccessToken = await getValidGitHubAccessToken(
+      db,
+      userId,
+      GITHUB_CLIENT_ID,
+      GITHUB_CLIENT_SECRET,
+    );
+
+    if (validAccessToken) {
+      // 取得したトークンを使ってGitHub APIを呼び出してみる (例: /user API)
+      const userProfile = await getGitHubUserProfile(validAccessToken);
+      return c.json({
+        message: "Successfully got valid access token and user profile.",
+        accessToken: validAccessToken,
+        userProfile: userProfile,
+      });
+    } else {
+      return c.json(
+        {
+          message:
+            "Failed to get a valid access token. User may need to re-authenticate.",
+        },
+        401,
+      );
+    }
+  } catch (error) {
+    console.error("Test token refresh endpoint error:", error);
+    return c.json({ error: "Internal server error during token test." }, 500);
+  }
+});
+
+// 認証済みユーザーのアクセス可能なリポジトリ一覧を返すエンドポイント
+// GET /github/repos?userId=PRISM_USER_ID
+githubRouter.get("/repos", async (c) => {
+  const db = c.get("db");
+  if (!db) {
+    return c.text(
+      "Database not initialized. Check your D1 binding in wrangler.jsonc or .env.",
+      500,
+    );
+  }
+
+  const userId = c.req.query("userId");
+  if (!userId) {
+    return c.json({ error: "userId is required" }, 400);
+  }
+
+  try {
+    // GitHub API: GET /user/repos （必要に応じてパラメータ調整）
+    const repos = await callGitHubApi<GitHubRepository[]>(
+      db,
+      userId,
+      c.env,
+      "/user/repos?per_page=100&sort=updated",
+      "GET",
+    );
+
+    // フロントエンドで使いやすい最低限の情報に絞って返す
+    const simplified = repos.map((r) => ({
+      id: r.id,
+      name: r.name,
+      full_name: r.full_name,
+      private: r.private,
+      owner: {
+        login: r.owner?.login,
+        id: r.owner?.id,
+      },
+      html_url: r.html_url,
+      description: r.description,
+      default_branch: r.default_branch,
+      permissions: r.permissions ?? undefined,
+    }));
+
+    return c.json({ repositories: simplified });
+  } catch (error) {
+    console.error("Failed to fetch repositories:", error);
+    return c.json(
+      {
+        error: "Failed to fetch repositories",
         details: error instanceof Error ? error.message : String(error),
       },
       500,
