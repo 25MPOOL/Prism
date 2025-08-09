@@ -1,5 +1,5 @@
 import { memo, useCallback } from "react";
-import { IconSignOut } from "./IconSignOut";
+import { IconSignOut } from "@/components/ui/IconSignOut";
 
 interface DropDownMenuProps {
   isOpen: boolean;

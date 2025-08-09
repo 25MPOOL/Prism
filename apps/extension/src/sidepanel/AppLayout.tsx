@@ -1,4 +1,4 @@
-import { DropDownMenu } from "@/components/ui/DropDownMenu";
+import { DropDownMenu } from "@/components/DropDownMenu";
 import { IconClock } from "@/components/ui/IconClock";
 import { IconPlus } from "@/components/ui/IconPlus";
 import { IconShare } from "@/components/ui/IconShare";
