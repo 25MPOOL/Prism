@@ -52,21 +52,23 @@ export const AppLayout = (props: AppLayoutProps) => {
           >
             <IconShare />
           </button>
-          <button
-            className="relative h-8 w-8 rounded-full border border-[#3d444d]"
-            type="button"
-            onClick={handleDropdownToggle}
-          >
-            <img
-              src={profile?.user.avatarUrl}
-              alt={profile?.user.name}
-              className="h-full w-full rounded-full"
-            />
+          <div className="relative">
+            <button
+              className="h-8 w-8 rounded-full border border-[#3d444d]"
+              type="button"
+              onClick={handleDropdownToggle}
+            >
+              <img
+                src={profile?.user.avatarUrl}
+                alt={profile?.user.name}
+                className="h-full w-full rounded-full"
+              />
+            </button>
             <DropDownMenu
               isOpen={isDropdownOpen}
               onClose={handleDropdownToggle}
             />
-          </button>
+          </div>
         </div>
       </header>
       <main className="flex min-h-0 grow flex-col">{children}</main>

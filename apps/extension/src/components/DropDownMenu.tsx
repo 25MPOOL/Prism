@@ -1,5 +1,6 @@
 import { memo, useCallback } from "react";
 import { IconSignOut } from "@/components/ui/IconSignOut";
+import { usePostLogout } from "@/hooks/api/postLogout";
 
 interface DropDownMenuProps {
   isOpen: boolean;
@@ -9,12 +10,13 @@ interface DropDownMenuProps {
 export const DropDownMenu = memo((props: DropDownMenuProps) => {
   const { isOpen, onClose } = props;
 
-  /**
-   * ドロップダウンメニューを閉じる
-   */
-  const _handleClose = useCallback(() => {
+  const postLogout = usePostLogout();
+
+  const handleLogout = useCallback(async () => {
+    console.log("handleLogout");
+    await postLogout.mutateAsync();
     onClose();
-  }, [onClose]);
+  }, [postLogout, onClose]);
 
   return (
     <>
@@ -24,8 +26,8 @@ export const DropDownMenu = memo((props: DropDownMenuProps) => {
             <li className="mx-2 rounded-md border-transparent duration-75 hover:bg-[#656c7626]">
               <button
                 type="button"
-                onClick={_handleClose}
-                className="flex flex-row gap-2 px-2 py-1.5"
+                onClick={() => handleLogout()}
+                className="flex w-full flex-row gap-2 px-2 py-1.5"
               >
                 {/* アイコン */}
                 <div className="flex items-center justify-center">

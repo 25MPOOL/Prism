@@ -14,6 +14,7 @@ function SidePanel() {
   useEffect(() => {
     // 読み込み時にログイン状態でなければ、認証フローを開始する
     if (!isLoggedIn) {
+      console.log("start");
       start();
     }
   }, [isLoggedIn, start]);
