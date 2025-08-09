@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { getCookie } from "hono/cookie";
+import { getCookie } from "hono/cookie"; // Cookie実装
 import { drizzle } from "drizzle-orm/d1"; // DB実装を有効化
 import * as schema from "../drizzle/schema"; // DB実装を有効化
+import { policies } from "./routes/policies"; // ポリシー
 
 import { conversations } from "./routes/conversation";
 import { websocket } from "./routes/websocket"; // 既存のwebsocketルーター
@@ -62,6 +63,8 @@ app.use("*", async (c, next) => {
 app.route("/github", githubRouter);
 
 app.route("/", conversations);
+
+app.route("/policies", policies);
 
 app.route("/ws", websocket); // 既存のwebsocketルーターの登録
 
