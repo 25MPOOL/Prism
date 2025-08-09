@@ -49,7 +49,10 @@ chrome.runtime.onMessage.addListener(async (message) => {
     }
 
     console.log("Backend exchange successful. Login complete.");
-    await chrome.storage.local.set({ isLoggedIn: true });
+    await chrome.storage.local.set({
+      isLoggedIn: true,
+      userId: data.user.id,
+    });
     return { ok: true };
   } catch (error) {
     console.error("OAuth flow failed:", error);
