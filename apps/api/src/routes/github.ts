@@ -305,6 +305,8 @@ githubRouter.get("/repos", async (c) => {
       owner: {
         login: r.owner?.login,
         id: r.owner?.id,
+        avatar_url: r.owner?.avatar_url,
+        type: r.owner?.type,
       },
       html_url: r.html_url,
       description: r.description,
