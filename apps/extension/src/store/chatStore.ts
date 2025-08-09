@@ -37,10 +37,12 @@ type ClientMessage =
   | {
       type: "session_create";
       data: null;
+      messageId?: string;
     }
   | {
       type: "chat";
       data: { sessionId: string; message: string };
+      messageId: string;
     };
 
 const WS_URL = "wss://prism-api.kaitomichigan22.workers.dev/ws/connect";
@@ -128,7 +130,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       error: null,
     }));
 
-    _manager?.send({ type: "chat", data: { sessionId, message: content } });
+    _manager?.send({
+      type: "chat",
+      data: { sessionId, message: content },
+      messageId: crypto.randomUUID(),
+    });
   },
 
   // 履歴から既存セッションをロードして再開
