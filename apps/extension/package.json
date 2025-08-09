@@ -17,6 +17,7 @@
     "zustand": "^5.0.7"
   },
   "devDependencies": {
+    "@tanstack/react-query": "^5.84.2",
     "@types/chrome": "0.0.258",
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
