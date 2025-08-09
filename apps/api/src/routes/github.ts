@@ -3,18 +3,17 @@ import {
   exchangeCodeForTokens,
   getGitHubUserProfile,
 } from "../services/github/auth"; // getGitHubUserProfileをインポート
-import { findOrCreateUser, saveGitHubTokens } from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
+import {
+  findOrCreateUser,
+  saveGitHubTokens,
+  getValidGitHubAccessToken,
+} from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
 import { callGitHubApi } from "../services/github/apiClient";
 import type {
   GitHubRepository,
   GitHubCreatedIssue,
   CreateRepositoryInput,
 } from "../types/github";
-import {
-  findOrCreateUser,
-  saveGitHubTokens,
-  getValidGitHubAccessToken,
-} from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type * as schema from "../../drizzle/schema";
 import type { AppEnv } from "../types/definitions"; // AppEnvをインポート
