@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { getCookie } from "hono/cookie";
 import { drizzle } from "drizzle-orm/d1"; // DB実装を有効化
 import * as schema from "../drizzle/schema"; // DB実装を有効化
 import { eq } from "drizzle-orm";
@@ -20,6 +21,7 @@ export interface AppContext {
   Bindings: AppEnv;
   Variables: {
     db: DrizzleDB;
+    userId: string | null;
   };
 }
 
@@ -36,6 +38,7 @@ app.use(
     origin: "chrome-extension://iehakmnooonopdcffjcibndgidphpanc", // Prism ExtensionのID
     allowMethods: ["GET", "POST", "PUT", "DELETE"],
     allowHeaders: ["Content-Type"],
+    credentials: true, // すべてのリクエストでCookie→userIdを載せる(c.get("userId")で参照可)
   }),
 );
 
@@ -46,6 +49,7 @@ app.use("*", async (c, next) => {
   if (c.env.DB) {
     const db = drizzle(c.env.DB, { schema });
     c.set("db", db);
+    c.set("userId", getCookie(c, "prism_uid") || null);
   } else {
     // DBが利用できない場合のログまたはエラーハンドリング
     console.warn("D1 Database (c.env.DB) is not available.");

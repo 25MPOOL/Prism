@@ -13,6 +13,11 @@ export interface AppEnv extends GithubEnv {
 /*
 -----既存のHTTP API用型定義-----
 */
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  updatedAt: Date;
+}
 
 // Message内容の型
 export interface ConversationMessage {

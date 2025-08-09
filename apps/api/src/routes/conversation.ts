@@ -3,7 +3,10 @@ import { Hono } from "hono";
 import { ConversationService } from "../services/conversationsService";
 import type { AppEnv } from "../types/definitions";
 
-const conversations = new Hono<{ Bindings: AppEnv }>();
+const conversations = new Hono<{
+  Bindings: AppEnv;
+  Variables: { userId: string | null };
+}>();
 
 // チャット用エンドポイント
 conversations.post("/chat", async (c) => {
@@ -38,6 +41,16 @@ conversations.post("/chat", async (c) => {
       500,
     );
   }
+});
+
+// チャット履歴一覧表示
+conversations.get("/sessions", async (c) => {
+  const userId = c.get("userId"); // Cookieでユーザー識別
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
+  const svc = new ConversationService(c.env.GEMINI_API_KEY ?? "", c.env.DB);
+  const sessions = await svc.listSessionsByUser(userId, { days: 7, limit: 50 });
+  return c.json({ success: true, data: { sessions } });
 });
 
 // ヘルスチェック用
