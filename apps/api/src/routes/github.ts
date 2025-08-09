@@ -74,55 +74,14 @@ githubRouter.get("/callback", async (c) => {
   if (!returnedState || !storedState || returnedState !== storedState) {
     return c.text("Invalid state parameter. Possible CSRF attack.", 400);
   }
-  // 使い捨て: Cookie削除
-  // setCookie(c, "github_oauth_state", "", {
-  //   httpOnly: true,
-  //   secure: true,
-  //   sameSite: "Lax",
-  //   path: "/",
-  //   maxAge: 0,
-  // });
 
-  // 新規追加: トークン取得とリフレッシュのテストエンドポイント
-  githubRouter.get("/test-token-refresh", async (c) => {
-    const db = c.get("db");
-    if (!db) return c.text("Database not initialized.", 500);
-
-    const userId = c.req.query("userId"); // テストしたいユーザーのPrism User IDをクエリパラメータで渡す
-    if (!userId) return c.text("User ID is required for testing.", 400);
-
-    const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
-    const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
-
-    try {
-      const validAccessToken = await getValidGitHubAccessToken(
-        db,
-        userId,
-        GITHUB_CLIENT_ID,
-        GITHUB_CLIENT_SECRET,
-      );
-
-      if (validAccessToken) {
-        // 取得したトークンを使ってGitHub APIを呼び出してみる (例: /user API)
-        const userProfile = await getGitHubUserProfile(validAccessToken);
-        return c.json({
-          message: "Successfully got valid access token and user profile.",
-          accessToken: validAccessToken,
-          userProfile: userProfile,
-        });
-      } else {
-        return c.json(
-          {
-            message:
-              "Failed to get a valid access token. User may need to re-authenticate.",
-          },
-          401,
-        );
-      }
-    } catch (error) {
-      console.error("Test token refresh endpoint error:", error);
-      return c.json({ error: "Internal server error during token test." }, 500);
-    }
+  // github_oauth_state削除
+  setCookie(c, "github_oauth_state", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: 0,
   });
 
   // 以下、トークン交換へ続行…
@@ -164,7 +123,7 @@ githubRouter.get("/callback", async (c) => {
     setCookie(c, "prism_uid", user.id, {
       httpOnly: true,
       secure: true,
-      sameSite: "Lax",
+      sameSite: "None", // Lax から Noneに変更（拡張→APIのクロスサイト送信を許可）
       path: "/",
       maxAge: 60 * 60 * 24 * 30,
     });
@@ -191,6 +150,48 @@ githubRouter.get("/callback", async (c) => {
       },
       500,
     );
+  }
+});
+
+// 新規追加: トークン取得とリフレッシュのテストエンドポイント
+githubRouter.get("/test-token-refresh", async (c) => {
+  const db = c.get("db");
+  if (!db) return c.text("Database not initialized.", 500);
+
+  const userId = c.req.query("userId"); // テストしたいユーザーのPrism User IDをクエリパラメータで渡す
+  if (!userId) return c.text("User ID is required for testing.", 400);
+
+  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
+  const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
+
+  try {
+    const validAccessToken = await getValidGitHubAccessToken(
+      db,
+      userId,
+      GITHUB_CLIENT_ID,
+      GITHUB_CLIENT_SECRET,
+    );
+
+    if (validAccessToken) {
+      // 取得したトークンを使ってGitHub APIを呼び出してみる (例: /user API)
+      const userProfile = await getGitHubUserProfile(validAccessToken);
+      return c.json({
+        message: "Successfully got valid access token and user profile.",
+        accessToken: validAccessToken,
+        userProfile: userProfile,
+      });
+    } else {
+      return c.json(
+        {
+          message:
+            "Failed to get a valid access token. User may need to re-authenticate.",
+        },
+        401,
+      );
+    }
+  } catch (error) {
+    console.error("Test token refresh endpoint error:", error);
+    return c.json({ error: "Internal server error during token test." }, 500);
   }
 });
 
@@ -246,6 +247,15 @@ githubRouter.post("/exchange", async (c) => {
 
     // 4. トークン保存
     await saveGitHubTokens(db, user.id, tokens);
+
+    // 拡張機能側でもcookieを実装
+    setCookie(c, "prism_uid", user.id, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None", // Lax から Noneに変更（拡張→APIのクロスサイト送信を許可）
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
 
     return c.json({
       success: true,
