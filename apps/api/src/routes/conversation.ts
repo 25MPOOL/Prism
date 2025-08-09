@@ -1,11 +1,17 @@
 import { Hono } from "hono";
-// import { cors } from "hono/cors";
+import { setCookie } from "hono/cookie";
+import { eq } from "drizzle-orm";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
+import * as schema from "../../drizzle/schema";
 import { ConversationService } from "../services/conversationsService";
 import type { AppEnv } from "../types/definitions";
 
 const conversations = new Hono<{
   Bindings: AppEnv;
-  Variables: { userId: string | null };
+  Variables: {
+    db: DrizzleD1Database<typeof schema>;
+    userId: string | null;
+  };
 }>();
 
 // チャット用エンドポイント
@@ -66,6 +72,43 @@ conversations.get("/sessions/:sessionId/messages", async (c) => {
 
   const session = await svc.getSessionData(sessionId);
   return c.json({ success: true, data: session });
+});
+
+conversations.post("/auth/logout", async (c) => {
+  const userId = c.get("userId");
+
+  // Cookie削除
+  setCookie(c, "prism_uid", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: 0,
+  });
+  setCookie(c, "ext_redirect", "", { path: "/", maxAge: 0 });
+  setCookie(c, "github_oauth_state", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: 0,
+  });
+
+  // DBからユーザーデータ削除（cascadeで関連テーブルも削除）
+  if (userId) {
+    const db = c.get("db");
+    if (db) {
+      try {
+        await db.delete(schema.users).where(eq(schema.users.id, userId));
+        console.log(`User ${userId} and all related data deleted`);
+      } catch (error) {
+        console.error("Failed to delete user data:", error);
+        // エラーでもCookie削除は成功として扱う
+      }
+    }
+  }
+
+  return c.json({ success: true });
 });
 
 // ヘルスチェック用
