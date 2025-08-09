@@ -1,10 +1,12 @@
 import { AppLayout } from "@/sidepanel/AppLayout";
-import { ChatInput } from "@/components/ChatInput";
-import { ChatArea } from "@/components/ChatArea";
 import "@/globals.css";
 import { useChat } from "@/hooks/useChat";
 import { useGithubOAuth } from "@/hooks/api/useGithubOAuth";
 import { useEffect } from "react";
+// import { SelectRepository } from "@/components/SelectRepository";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ChatArea } from "@/components/ChatArea";
+import { ChatInput } from "@/components/ChatInput";
 
 function SidePanel() {
   const { start, isLoggedIn } = useGithubOAuth();
@@ -18,11 +20,26 @@ function SidePanel() {
 
   useChat();
 
+  /**
+   * React Queryの設定
+   */
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 1000 * 20,
+        retry: 1,
+      },
+    },
+  });
+
   return (
-    <AppLayout>
-      <ChatArea />
-      <ChatInput />
-    </AppLayout>
+    <QueryClientProvider client={queryClient}>
+      <AppLayout>
+        <ChatArea />
+        <ChatInput />
+        {/* <SelectRepository /> */}
+      </AppLayout>
+    </QueryClientProvider>
   );
 }
 
