@@ -3,7 +3,11 @@ import {
   exchangeCodeForTokens,
   getGitHubUserProfile,
 } from "../services/github/auth"; // getGitHubUserProfileをインポート
-import { findOrCreateUser, saveGitHubTokens } from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
+import {
+  findOrCreateUser,
+  saveGitHubTokens,
+  getValidGitHubAccessToken,
+} from "../services/user"; // findOrCreateUser, saveGitHubTokensをインポート
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type * as schema from "../../drizzle/schema";
 import type { AppEnv } from "../types/definitions"; // AppEnvをインポート
@@ -22,10 +26,9 @@ githubRouter.get("/oauth", async (c) => {
   const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
   const GITHUB_REDIRECT_URI = c.env.GITHUB_REDIRECT_URI;
 
-  // 拡張機能から渡されたリダイレクト先URLを取得
+  // 拡張機能から渡されたリダイレクト先URLを取得しCookieに保存（10分）
   const extRedirect = c.req.query("extRedirect");
   if (extRedirect) {
-    // Cookieに拡張機能の戻り先を保存（10分）
     setCookie(c, "ext_redirect", extRedirect, {
       httpOnly: true,
       secure: true,
@@ -80,6 +83,48 @@ githubRouter.get("/callback", async (c) => {
   //   maxAge: 0,
   // });
 
+  // 新規追加: トークン取得とリフレッシュのテストエンドポイント
+  githubRouter.get("/test-token-refresh", async (c) => {
+    const db = c.get("db");
+    if (!db) return c.text("Database not initialized.", 500);
+
+    const userId = c.req.query("userId"); // テストしたいユーザーのPrism User IDをクエリパラメータで渡す
+    if (!userId) return c.text("User ID is required for testing.", 400);
+
+    const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
+    const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
+
+    try {
+      const validAccessToken = await getValidGitHubAccessToken(
+        db,
+        userId,
+        GITHUB_CLIENT_ID,
+        GITHUB_CLIENT_SECRET,
+      );
+
+      if (validAccessToken) {
+        // 取得したトークンを使ってGitHub APIを呼び出してみる (例: /user API)
+        const userProfile = await getGitHubUserProfile(validAccessToken);
+        return c.json({
+          message: "Successfully got valid access token and user profile.",
+          accessToken: validAccessToken,
+          userProfile: userProfile,
+        });
+      } else {
+        return c.json(
+          {
+            message:
+              "Failed to get a valid access token. User may need to re-authenticate.",
+          },
+          401,
+        );
+      }
+    } catch (error) {
+      console.error("Test token refresh endpoint error:", error);
+      return c.json({ error: "Internal server error during token test." }, 500);
+    }
+  });
+
   // 以下、トークン交換へ続行…
 
   // DBインスタンスをコンテキストから取得
@@ -118,18 +163,92 @@ githubRouter.get("/callback", async (c) => {
     console.log("Authentication successful for user:", user.githubUsername);
     console.log("Access Token saved/updated for userId:", user.id);
 
+    // 拡張リダイレクト先が保存されていれば、そのURLへ成功フラグを付けてリダイレクト
     const extRedirect = getCookie(c, "ext_redirect");
-
     if (extRedirect) {
-      // Cookieに保存された拡張機能のURLがあれば、そこに成功フラグを付けてリダイレクト
-      setCookie(c, "ext_redirect", "", { maxAge: 0 }); // Cookieを削除
+      // Cookieを削除
+      setCookie(c, "ext_redirect", "", { maxAge: 0, path: "/" });
       return c.redirect(`${extRedirect}#success=1`);
     }
 
-    // 拡張機能からの要求でなければ、通常のWebページ向けの成功画面を返す
-    return c.html("<h1>Authentication Successful!</h1>");
+    // 拡張側からの要求でなければ、簡易成功ページを返す
+    return c.html("<h1>Authentication Successful</h1>");
   } catch (error) {
     console.error("GitHub OAuth callback error:", error);
+    return c.json(
+      {
+        error: "Authentication failed",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
+  }
+});
+
+// Chrome拡張（chromiumapp.org）向け: 拡張が受け取ったcodeをAPIに渡してトークン交換するエンドポイント
+// 拡張側で chrome.identity.launchWebAuthFlow により https://<EXT_ID>.chromiumapp.org/ にリダイレクトを受け、
+// そのURLに含まれる ?code=...&state=... をここにPOSTして処理します。
+githubRouter.post("/exchange", async (c) => {
+  const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
+  const GITHUB_CLIENT_SECRET = c.env.GITHUB_CLIENT_SECRET;
+
+  let body: { code?: string; state?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const code = body.code;
+  // state は将来的に検証する（現在は拡張フローの都合でサーバー側保持がないため任意）
+
+  if (!code) {
+    return c.json({ error: "code is required" }, 400);
+  }
+
+  // DBインスタンス取得
+  const db = c.get("db");
+  if (!db) {
+    return c.text(
+      "Database not initialized. Check your D1 binding in wrangler.jsonc or .env.",
+      500,
+    );
+  }
+
+  try {
+    // 1. トークン交換
+    const tokens = await exchangeCodeForTokens(
+      code,
+      GITHUB_CLIENT_ID,
+      GITHUB_CLIENT_SECRET,
+    );
+    if (!tokens || !tokens.access_token) {
+      return c.json({ error: "Failed to get access token from GitHub." }, 500);
+    }
+
+    // 2. GitHubユーザープロファイル取得
+    const userProfile = await getGitHubUserProfile(tokens.access_token);
+    if (!userProfile) {
+      return c.json({ error: "Failed to get GitHub user profile." }, 500);
+    }
+
+    // 3. Prism内部ユーザーUpsert
+    const user = await findOrCreateUser(db, userProfile.id, userProfile.login);
+
+    // 4. トークン保存
+    await saveGitHubTokens(db, user.id, tokens);
+
+    return c.json({
+      success: true,
+      message: "Authentication successful",
+      user: {
+        id: user.id,
+        githubId: user.githubId,
+        githubUsername: user.githubUsername,
+      },
+    });
+  } catch (error) {
+    console.error("GitHub OAuth exchange error:", error);
     return c.json(
       {
         error: "Authentication failed",
