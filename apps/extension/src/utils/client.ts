@@ -42,6 +42,7 @@ const requestWithoutBody =
     const response = await fetch(url.toString(), {
       method,
       headers: baseHeaders,
+      credentials: "include",
     });
     return handleResponse<T>(response);
   };
@@ -59,6 +60,7 @@ const requestWithBody =
       method,
       headers: baseHeaders,
       body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
     });
     return handleResponse<T>(response);
   };
