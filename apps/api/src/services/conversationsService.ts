@@ -134,7 +134,7 @@ export class ConversationService {
     } else if (wasIssueRegistrationConfirmation) {
       if (isPositive) {
         const proceedMessage =
-          "ありがとうございます。では、GitHubリポジトリの選択に進みましょう。準備ができたらリポジトリ名を教えてください。";
+          "[SHOW_REPOSITORY_SELECTION]\nGitHubリポジトリを選択してください。Issue登録を開始します。";
         return this.saveMessage(sessionId, "ai", proceedMessage);
       }
       if (isNegative) {
