@@ -33,7 +33,7 @@ const app = new Hono<AppContext>();
 app.use(
   "/*",
   cors({
-    origin: "chrome-extension://imjikfcieomhjalhflkgmkkafnenkpeo", // Prism ExtensionのID
+    origin: ["chrome-extension://imjikfcieomhjalhflkgmkkafnenkpeo"],
     allowMethods: ["GET", "POST", "PUT", "DELETE"],
     allowHeaders: ["Content-Type"],
   }),
