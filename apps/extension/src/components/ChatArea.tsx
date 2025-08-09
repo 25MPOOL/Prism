@@ -20,7 +20,19 @@ export const ChatArea = () => {
             <ModelResponse key={m.id} content={m.content} />
           ),
         )}
-        {isLoading && <ModelResponse content="Thinking..." />}
+        {isLoading && (
+          <div className="w-full">
+            <div className="flex flex-col items-start gap-2">
+              <div className="inline-flex items-center gap-2 rounded-md bg-[#1f242b] px-3 py-2">
+                <div className="typing-dots">
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
