@@ -54,7 +54,11 @@ export const ModelResponse = memo((props: ModelResponseProps) => {
       );
     } catch (error) {
       console.error("Issue登録に失敗しました:", error);
-      alert("Issue登録に失敗しました。もう一度お試しください。");
+      let errorMessage = "Issue登録に失敗しました。";
+      if (error instanceof Error) {
+        errorMessage = `Issue登録に失敗しました。\n詳細: ${error.message}`;
+      }
+      alert(`${errorMessage}\n\nもう一度お試しください。`);
     } finally {
       setIsCreatingIssues(false);
       setShowRepositorySelection(false);

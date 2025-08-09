@@ -62,7 +62,7 @@ app.use("*", async (c, next) => {
 // GitHub認証関連のルートを登録
 app.route("/github", githubRouter);
 
-app.route("/", conversations);
+app.route("/conversation", conversations);
 
 app.route("/policies", policies);
 

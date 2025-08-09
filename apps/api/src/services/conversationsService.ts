@@ -205,7 +205,7 @@ export class ConversationService {
     // `requirements`フェーズで、ユーザーの発言が6回に達し、かつ最近拒否されていない場合のみ移行を提案
     if (
       session.phase === "requirements" &&
-      userMessagesInPhase >= 5 &&
+      userMessagesInPhase >= 8 &&
       !recentlyRejectedTransition
     ) {
       console.log(
