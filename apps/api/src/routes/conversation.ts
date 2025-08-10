@@ -101,6 +101,37 @@ conversations.get("/:sessionId/issues", async (c) => {
   }
 });
 
+conversations.post("/:sessionId/generate-requirements", async (c) => {
+  const userId = c.get("userId");
+  if (!userId) return c.json({ error: "Unauthorized" }, 401);
+
+  const { sessionId } = c.req.param();
+  const svc = new ConversationService(c.env.GEMINI_API_KEY ?? "", c.env.DB);
+
+  // 所有者チェック
+  const owner = await svc.getSessionOwner(sessionId);
+  if (owner !== userId) return c.json({ error: "Forbidden" }, 403);
+
+  try {
+    const requirementsDoc =
+      await svc.generateRequirementsDocFromSession(sessionId);
+    const response = `これまでの対話を基に、要件定義書を生成しました。\n\n${requirementsDoc}`;
+
+    // AIメッセージとしてDBに保存
+    const aiMessage = await svc.saveMessage(sessionId, "ai", response);
+    return c.json({ success: true, data: aiMessage });
+  } catch (error) {
+    console.error("Failed to generate requirements document:", error);
+    return c.json(
+      {
+        error: "Failed to generate requirements document",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      500,
+    );
+  }
+});
+
 conversations.post("/auth/logout", async (c) => {
   const userId = c.get("userId");
   const GITHUB_CLIENT_ID = c.env.GITHUB_CLIENT_ID;
