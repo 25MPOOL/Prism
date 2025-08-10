@@ -63,6 +63,11 @@ export interface ChatResponseData {
   message: ConversationMessage;
 }
 
+// ストリーミング用の増分データ
+export interface ProcessingData {
+  delta: string;
+}
+
 export interface GeneratedIssue {
   title: string;
   description: string;
@@ -85,6 +90,12 @@ export interface PongData {
 // Websocket応答Message型
 export interface WebSocketResponse {
   type: "chat_response" | "session_created" | "error" | "pong" | "processing";
-  data: ChatResponseData | SessionCreatedData | ErrorData | PongData | null;
+  data:
+    | ChatResponseData
+    | SessionCreatedData
+    | ErrorData
+    | PongData
+    | ProcessingData
+    | null;
   messageId?: string;
 }

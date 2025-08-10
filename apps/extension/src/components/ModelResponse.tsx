@@ -7,11 +7,12 @@ import { useChatStore } from "@/store/chatStore";
 import type { Repository } from "@/hooks/api/getRepos";
 
 interface ModelResponseProps {
+  id?: string;
   content: string;
 }
 
 export const ModelResponse = memo((props: ModelResponseProps) => {
-  const { content } = props;
+  const { id, content } = props;
   const [showRepositorySelection, setShowRepositorySelection] = useState(false);
   const [isCreatingIssues, setIsCreatingIssues] = useState(false);
 
@@ -72,7 +73,15 @@ export const ModelResponse = memo((props: ModelResponseProps) => {
         <div className="flex h-8 w-8 items-center justify-center">
           <img src={PrismLogo} alt="prism" />
         </div>
-        <div className="whitespace-pre-wrap leading-6">{displayContent}</div>
+        <div
+          className={
+            (id?.startsWith("stream:") ? "typewriter" : "") +
+            "whitespace-pre-wrap leading-6"
+          }
+          data-content={displayContent}
+        >
+          {id?.startsWith("stream:") ? "" : displayContent}
+        </div>
 
         {shouldShowRepositorySelection && (
           <button

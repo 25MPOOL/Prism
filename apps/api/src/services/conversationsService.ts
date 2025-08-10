@@ -244,7 +244,7 @@ export class ConversationService {
       .replace("{HISTORY}", historyText)
       .replace("{USER_MESSAGE}", userMessage);
 
-    // 5. Gemini APIで応答生成
+    // 5. Gemini APIで応答生成（非ストリーム版）
     let aiResponse: string;
     try {
       aiResponse = await this.geminiClient.generateContent(prompt);
@@ -289,6 +289,47 @@ export class ConversationService {
     }
     // 7. AIの応答をDBに保存
     return this.saveMessage(sessionId, "ai", aiResponse);
+  }
+
+  // 真のストリーミング用（呼び出し側からonDeltaを注入）
+  public async processMessageStream(
+    sessionId: string,
+    userMessage: string,
+    onDelta: (delta: string) => void | Promise<void>,
+    opts?: { signal?: AbortSignal; idleMs?: number },
+  ): Promise<ConversationMessage> {
+    // 1. ユーザーメッセージ保存
+    await this.saveMessage(sessionId, "user", userMessage);
+
+    // 2. セッションと履歴取得
+    const session = await this.getSession(sessionId);
+    if (!session) throw new Error("セッションが見つかりません");
+
+    const historyText = session.messages
+      .map((msg) => `${msg.role}: ${msg.content}`)
+      .join("\n");
+    const prompt = PROMPT_TEMPLATE.replace("{PHASE}", session.phase)
+      .replace("{HISTORY}", historyText)
+      .replace("{USER_MESSAGE}", userMessage);
+
+    let full = "";
+    try {
+      // 先に短い「応答準備中...」を送るとUXが向上
+      await onDelta("");
+      full = await this.geminiClient.streamContent(prompt, onDelta, opts);
+    } catch (error) {
+      if (
+        (error as Error).message.includes("quota") ||
+        (error as Error).message.includes("rate limit")
+      ) {
+        full =
+          "申し訳ありません。現在APIの利用制限に達しています。しばらく時間をおいてから再度お試しください。";
+      } else {
+        throw error;
+      }
+    }
+
+    return this.saveMessage(sessionId, "ai", full);
   }
 
   // 要件定義書を生成するメソッド

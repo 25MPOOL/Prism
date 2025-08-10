@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Typewriter effect for streaming content without JS slicing */
+.typewriter::after {
+  content: attr(data-content);
+  white-space: pre-wrap;
+  display: inline-block;
+  overflow: hidden;
+  /* steps(N,end) を大きくすると更新回数が減ってパフォーマンスが上がる */
+  animation: tw-reveal steps(30, end) 1.2s forwards;
+}
+
+@keyframes tw-reveal {
+  from {
+    max-height: 1.2em;
+    width: 0ch;
+  }
+  to {
+    width: 100%;
+  }
+}
+
 /* typing dots animation */
 @keyframes pulseDot {
   0%,

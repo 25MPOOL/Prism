@@ -128,19 +128,118 @@ async function handleChat(
   messageId: string | undefined,
   conversationService: ConversationService,
 ) {
-  const response = await conversationService.processMessage(
-    data.sessionId,
-    data.message,
-  );
-
-  const wsResponse: WebSocketResponse = {
-    type: "chat_response",
-    data: { message: response },
-    messageId,
+  const abortController = new AbortController();
+  let closed = false;
+  const onClose = () => {
+    closed = true;
+    try {
+      abortController.abort("ws closed");
+    } catch {}
   };
+  webSocket.addEventListener("close", onClose);
+  webSocket.addEventListener("error", onClose);
 
-  webSocket.send(JSON.stringify(wsResponse));
+  const hardTimeout = setTimeout(() => {
+    try {
+      abortController.abort("stream timeout");
+    } catch {}
+  }, 60_000);
+
+  try {
+    // 1文字ドリッパー（供給は随時append、送信は一定間隔で1文字）
+    const dripper = createDripper(webSocket, messageId);
+
+    // 真のストリーミング: GeminiのSSEを受け取りつつドリッパーに供給
+    const streamed = await conversationService.processMessageStream(
+      data.sessionId,
+      data.message,
+      async (delta) => {
+        if (closed) return;
+        dripper.append(delta);
+      },
+      {
+        signal: abortController.signal as unknown as AbortSignal,
+        idleMs: 15000,
+      },
+    );
+
+    // 送信完了まで待つ
+    await dripper.finish();
+
+    if (!closed) {
+      const wsResponse: WebSocketResponse = {
+        type: "chat_response",
+        data: { message: streamed },
+        messageId,
+      };
+      webSocket.send(JSON.stringify(wsResponse));
+    }
+  } catch (err) {
+    if (!closed) {
+      const msg = (err as Error)?.message ?? "stream failed";
+      const wsResponse: WebSocketResponse = msg.includes(
+        "No response from Gemini API (stream)",
+      )
+        ? {
+            type: "processing",
+            data: { delta: "" },
+            messageId,
+          }
+        : {
+            type: "error",
+            data: { error: msg },
+            messageId,
+          };
+      try {
+        webSocket.send(JSON.stringify(wsResponse));
+      } catch {}
+    }
+  } finally {
+    clearTimeout(hardTimeout);
+    webSocket.removeEventListener("close", onClose);
+    webSocket.removeEventListener("error", onClose);
+  }
 }
+
+function createDripper(webSocket: WebSocket, messageId?: string) {
+  let buffer = "";
+  let done = false;
+  let resolveDone: (() => void) | null = null;
+  const promise = new Promise<void>((resolve) => {
+    resolveDone = resolve;
+  });
+  const interval = setInterval(() => {
+    if (buffer.length > 0) {
+      const ch = buffer[0];
+      buffer = buffer.slice(1);
+      const streaming: WebSocketResponse = {
+        type: "processing",
+        data: { delta: ch },
+        messageId,
+      };
+      try {
+        webSocket.send(JSON.stringify(streaming));
+      } catch {}
+      return;
+    }
+    if (done) {
+      clearInterval(interval);
+      resolveDone?.();
+    }
+  }, 20);
+
+  return {
+    append(delta: string) {
+      buffer += delta;
+    },
+    async finish() {
+      done = true;
+      await promise;
+    },
+  };
+}
+
+// Note: sleep is no longer used; keep for potential future tweaks
 
 async function handleSessionCreate(
   webSocket: WebSocket,

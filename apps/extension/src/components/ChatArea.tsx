@@ -5,6 +5,9 @@ import { useChat } from "@/hooks/useChat";
 
 export const ChatArea = () => {
   const { messages, isLoading } = useChat();
+  const hasStreaming = messages.some(
+    (m) => m.role === "ai" && m.id.startsWith("stream:"),
+  );
 
   useEffect(() => {
     console.log(messages);
@@ -17,10 +20,10 @@ export const ChatArea = () => {
           m.role === "user" ? (
             <UserQuery key={m.id} content={m.content} />
           ) : (
-            <ModelResponse key={m.id} content={m.content} />
+            <ModelResponse key={m.id} id={m.id} content={m.content} />
           ),
         )}
-        {isLoading && (
+        {isLoading && !hasStreaming && (
           <div className="w-full">
             <div className="flex flex-col items-start gap-2">
               <div className="inline-flex items-center gap-2 rounded-md bg-[#1f242b] px-3 py-2">
