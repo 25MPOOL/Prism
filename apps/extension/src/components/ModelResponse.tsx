@@ -1,6 +1,7 @@
 import { memo, useState } from "react";
 import PrismLogo from "@assets/prism.png";
 import { SelectRepository } from "./SelectRepository";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useCreateIssues } from "@/hooks/api/createIssues";
 import { useGetSessionIssues } from "@/hooks/api/getSessionIssues";
 import { useChatStore } from "@/store/chatStore";
@@ -72,7 +73,10 @@ export const ModelResponse = memo((props: ModelResponseProps) => {
         <div className="flex h-8 w-8 items-center justify-center">
           <img src={PrismLogo} alt="prism" />
         </div>
-        <div className="whitespace-pre-wrap leading-6">{displayContent}</div>
+        {/* Markdown本文は素のレイアウト。コードブロックのみMarkdownRenderer内で背景化 */}
+        <div className="w-full">
+          <MarkdownRenderer content={displayContent} />
+        </div>
 
         {shouldShowRepositorySelection && (
           <button

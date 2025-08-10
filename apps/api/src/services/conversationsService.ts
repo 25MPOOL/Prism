@@ -63,7 +63,9 @@ export class ConversationService {
           await this.generateRequirementsDocFromSession(sessionId);
         const response =
           "これまでの対話を基に、要件定義書を生成しました。\n\n" +
-          requirementsDoc;
+          "```md\n" +
+          requirementsDoc +
+          "\n```";
         return this.saveMessage(sessionId, "ai", response);
       } catch (error) {
         console.error("要件定義書生成中にエラー:", error);
@@ -394,8 +396,9 @@ export class ConversationService {
         const reqDoc = await this.generateRequirementsDocFromSession(sessionId);
         return (
           "ここまでの対話を基に、要件定義書を作成しました。\n\n" +
+          "```md\n" +
           reqDoc +
-          "\n\nこの内容でよろしければ、Issue案を生成します。よろしいですか？"
+          "\n```\n\nこの内容でよろしければ、Issue案を生成します。よろしいですか？"
         );
       } catch (error) {
         console.error("要件定義書生成中にエラーが発生しました:", error);
