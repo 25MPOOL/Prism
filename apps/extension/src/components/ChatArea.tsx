@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { ModelResponse } from "./ModelResponse";
 import { UserQuery } from "./UserQuery";
 import { useChat } from "@/hooks/useChat";
+import PrismLogo from "@assets/prism.png";
 
 export const ChatArea = () => {
   const { messages, isLoading } = useChat();
