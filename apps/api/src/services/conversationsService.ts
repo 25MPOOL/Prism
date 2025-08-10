@@ -57,6 +57,23 @@ export class ConversationService {
     sessionId: string,
     userMessage: string,
   ): Promise<ConversationMessage> {
+    if (userMessage === "要件定義書を生成") {
+      try {
+        const requirementsDoc =
+          await this.generateRequirementsDocFromSession(sessionId);
+        const response =
+          "これまでの対話を基に、要件定義書を生成しました。\n\n" +
+          requirementsDoc;
+        return this.saveMessage(sessionId, "ai", response);
+      } catch (error) {
+        console.error("要件定義書生成中にエラー:", error);
+        return this.saveMessage(
+          sessionId,
+          "ai",
+          "申し訳ありません、要件定義書の生成中にエラーが発生しました。もう少し対話を進めてから再試行してください。",
+        );
+      }
+    }
     // 1. ユーザーメッセージをDBに保存
     await this.saveMessage(sessionId, "user", userMessage);
 
@@ -205,7 +222,7 @@ export class ConversationService {
     // `requirements`フェーズで、ユーザーの発言が6回に達し、かつ最近拒否されていない場合のみ移行を提案
     if (
       session.phase === "requirements" &&
-      userMessagesInPhase >= 5 &&
+      userMessagesInPhase >= 8 &&
       !recentlyRejectedTransition
     ) {
       console.log(
@@ -275,7 +292,7 @@ export class ConversationService {
   }
 
   // 要件定義書を生成するメソッド
-  private async generateRequirementsDocFromSession(
+  public async generateRequirementsDocFromSession(
     sessionId: string,
   ): Promise<string> {
     const session = await this.getSession(sessionId);
@@ -506,7 +523,7 @@ export class ConversationService {
   }
 
   // メッセージをDBに保存
-  private async saveMessage(
+  public async saveMessage(
     sessionId: string,
     role: "user" | "ai",
     content: string,

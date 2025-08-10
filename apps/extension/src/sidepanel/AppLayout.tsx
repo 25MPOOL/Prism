@@ -1,3 +1,4 @@
+import { useChatStore } from "@/store/chatStore";
 import { DropDownMenu } from "@/components/DropDownMenu";
 import { IconClock } from "@/components/ui/IconClock";
 import { IconPlus } from "@/components/ui/IconPlus";
@@ -29,6 +30,20 @@ export const AppLayout = (props: AppLayoutProps) => {
     setIsDropdownOpen((prev) => !prev);
   }, []);
 
+  const sessionId = useChatStore((s) => s.sessionId);
+  const sendMessage = useChatStore((s) => s.sendMessage);
+
+  const handleGenerateRequirements = async () => {
+    console.log("要件定義書生成ボタンがクリックされました");
+    console.log("現在のセッションID", sessionId);
+    if (!sessionId) {
+      alert("セッションが見つかりません。会話を開始してください。");
+      return;
+    }
+
+    sendMessage("要件定義書を生成");
+  };
+
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
       <header className="flex w-full items-center justify-between gap-3 bg-[#151b23] p-4 shadow-inner-bottom">
@@ -43,6 +58,8 @@ export const AppLayout = (props: AppLayoutProps) => {
           <button
             className="h-8 w-8 rounded-md border border-[#3d444d] duration-75 hover:bg-[#656c7626]"
             type="button"
+            onClick={handleGenerateRequirements}
+            title="要件定義書を生成"
           >
             <IconClock />
           </button>
