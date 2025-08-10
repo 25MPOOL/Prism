@@ -32,3 +32,23 @@
 .typing-dot:nth-child(3) {
   animation-delay: 0.4s;
 }
+
+/* ChatArea: スクロールバーを非表示にする */
+.chat-scroll {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.chat-scroll::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* 共通: スクロールバー非表示ユーティリティ */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+  width: 0;
+  height: 0;
+}
