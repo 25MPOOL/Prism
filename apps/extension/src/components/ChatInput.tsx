@@ -35,7 +35,7 @@ export const ChatInput = () => {
         <div className="flex flex-col">
           <div className="whitespace-pre-wrap">
             <textarea
-              className="w-full resize-none bg-transparent p-4 leading-6 focus:outline-none"
+              className="no-scrollbar w-full resize-none bg-transparent p-4 leading-6 focus:outline-none"
               placeholder="Prismと相談!"
               autoComplete="off"
               spellCheck="false"
