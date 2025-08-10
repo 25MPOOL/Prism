@@ -35,19 +35,19 @@ export const AppLayout = (props: AppLayoutProps) => {
         <h1 className="font-bold text-xl">Prism</h1>
         <div className="flex items-center gap-2">
           <button
-            className="h-8 w-8 rounded-md border border-[#3d444d]"
+            className="h-8 w-8 rounded-md border border-[#3d444d] duration-75 hover:bg-[#656c7626]"
             type="button"
           >
             <IconPlus />
           </button>
           <button
-            className="h-8 w-8 rounded-md border border-[#3d444d]"
+            className="h-8 w-8 rounded-md border border-[#3d444d] duration-75 hover:bg-[#656c7626]"
             type="button"
           >
             <IconClock />
           </button>
           <button
-            className="h-8 w-8 rounded-md border border-[#3d444d]"
+            className="h-8 w-8 rounded-md border border-[#3d444d] duration-75 hover:bg-[#656c7626]"
             type="button"
           >
             <IconShare />
