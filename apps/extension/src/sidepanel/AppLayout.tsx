@@ -56,8 +56,6 @@ export const AppLayout = (props: AppLayoutProps) => {
             <IconPlus />
           </button>
           <button
-            className="h-8 w-8 rounded-md border border-[#3d444d] hover:bg-[#21262d]"
-          <button
             className="h-8 w-8 rounded-md border border-[#3d444d] duration-75 hover:bg-[#656c7626]"
             type="button"
             onClick={handleGenerateRequirements}
