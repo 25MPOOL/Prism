@@ -117,12 +117,11 @@ export class ConversationService {
     });
 
     const isPositive =
-      /はい|OK|お願い|進めて|いい|わかった|了解|うん|ええ|賛成|ぜひ|おねがい|おk|ok|うい|大丈夫|y(es)?/i.test(
+      /はい|OK|お願い|進めて|いいよ|わかった|了解|うん|ええ|賛成|ぜひ|おねがい|おk|ok|うい|大丈夫|y(es)?/i.test(
         userMessage,
       );
-    const isNegative = /いいえ|やめ|不要|戻|no|嫌|いえ|いや|保留|まだ/i.test(
-      userMessage,
-    );
+    const isNegative =
+      /いいえ|やめ|不要|戻|no|嫌|いえ|いや|保留|やだ|まだ/i.test(userMessage);
 
     console.log("🔍 デバッグ: 肯定/否定判定", {
       userMessage,
@@ -146,7 +145,7 @@ export class ConversationService {
         }
       } else if (isNegative) {
         const stayMessage =
-          "承知いたしました。では、もう少し現在のフェーズについてお話ししましょう。他に何か追加したいことや、修正したい点はありますか？";
+          "承知いたしました。では、もう少し現在のフェーズについてお話ししましょう。他に何か追加したいことはありますか？";
         return this.saveMessage(sessionId, "ai", stayMessage);
       }
       // 肯定/否定どちらでもない曖昧な返答は、そのまま通常フローに続行
@@ -157,11 +156,16 @@ export class ConversationService {
         return this.saveMessage(sessionId, "ai", proceedMessage);
       }
       if (isNegative) {
-        const reviseMessage =
-          "承知しました。Issue登録は保留します。修正したい点を教えてください。";
-        return this.saveMessage(sessionId, "ai", reviseMessage);
+        const holdMessage =
+          "承知しました。Issue登録は保留します。再開する場合は『はい』と返答してください。";
+        return this.saveMessage(sessionId, "ai", holdMessage);
       }
-      // ここも曖昧な返答は通常フローに続行
+      // 曖昧な返答: はい/いいえを促す（通常フローに落とさない）
+      return this.saveMessage(
+        sessionId,
+        "ai",
+        'リポジトリ選択に進むかどうか、"はい" または "いいえ" でお答えください。',
+      );
     }
 
     if (wasIssueGenerationConfirmation) {
@@ -188,7 +192,14 @@ export class ConversationService {
         return this.saveMessage(
           sessionId,
           "ai",
-          "承知しました。要件定義書のどこを修正したいですか？",
+          "承知しました。Issue案の生成は保留します。再開する場合は『はい』と返答してください。",
+        );
+      } else {
+        // 曖昧な返答: はい/いいえを促す
+        return this.saveMessage(
+          sessionId,
+          "ai",
+          'Issue案を生成してもよろしいですか？\n進める場合は "はい"、中止する場合は "いいえ" とお答えください。',
         );
       }
     }
