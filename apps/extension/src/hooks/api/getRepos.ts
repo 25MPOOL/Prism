@@ -1,3 +1,4 @@
+import { getUserId } from "@/helpers";
 import { client } from "@/utils/client";
 import { useCallback } from "react";
 
@@ -33,14 +34,6 @@ interface ApiResponse {
 interface ApiCollectionResponse {
   repositories: ApiResponse[];
 }
-
-// userId: string
-/// extension storageからuserIdを取得
-const getUserId = async (): Promise<string> => {
-  const userId = await chrome.storage.local.get("userId");
-
-  return userId.userId;
-};
 
 const api = (userId: string): Promise<ApiCollectionResponse> => {
   return client.get(`github/repos?userId=${userId}`);
