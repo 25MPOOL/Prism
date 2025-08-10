@@ -23,12 +23,8 @@ export const ChatArea = () => {
         {isLoading && (
           <div className="w-full">
             <div className="flex flex-col items-start gap-2">
-              <div className="inline-flex items-center gap-2 rounded-md bg-[#1f242b] px-3 py-2">
-                <div className="typing-dots">
-                  <span className="typing-dot" />
-                  <span className="typing-dot" />
-                  <span className="typing-dot" />
-                </div>
+              <div className="flex h-8 w-8 items-center justify-center">
+                <img src={PrismLogo} alt="prism" className="animate-bounce" />
               </div>
             </div>
           </div>
