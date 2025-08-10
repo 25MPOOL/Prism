@@ -58,14 +58,14 @@ export const AppLayout = (props: AppLayoutProps) => {
           <button
             className="h-8 w-8 rounded-md border border-[#3d444d] duration-75 hover:bg-[#656c7626]"
             type="button"
-            onClick={handleGenerateRequirements}
-            title="要件定義書を生成"
           >
             <IconClock />
           </button>
           <button
             className="h-8 w-8 rounded-md border border-[#3d444d] duration-75 hover:bg-[#656c7626]"
             type="button"
+            onClick={handleGenerateRequirements}
+            title="要件定義書を生成"
           >
             <IconShare />
           </button>
